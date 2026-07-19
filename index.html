@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#183b2b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Sentinel Tracker" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <title>Sentinel Upcoming Inspection Tracker v0.1</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">SENTINEL PROTOTYPE</p>
+      <h1>Upcoming Food Inspection Tracker</h1>
+      <p class="subtitle">See what is due before it becomes overdue.</p>
+    </div>
+    <div class="header-actions">
+      <button id="loadDemoBtn" class="button secondary">Load Demo Data</button>
+      <button id="exportCsvBtn" class="button secondary">Export CSV</button>
+      <button id="exportJsonBtn" class="button secondary">Backup JSON</button>
+      <label class="button secondary file-label">
+        Restore JSON
+        <input id="importJsonInput" type="file" accept="application/json" hidden />
+      </label>
+    </div>
+  </header>
+
+  <div class="security-banner">
+    <strong>Portfolio prototype:</strong> Data stays in this browser. Use fictional or sanitized records only. Do not enter CUI, PII, credentials, or real operational data.
+  </div>
+
+  <nav class="tabs" aria-label="Tracker sections">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="facilities">Facilities</button>
+    <button class="tab" data-tab="calendar">Business Calendar</button>
+    <button class="tab" data-tab="test-guide">Test Guide</button>
+  </nav>
+
+  <main>
+    <section id="dashboard" class="tab-panel active">
+      <div class="toolbar">
+        <div class="as-of-control">
+          <label for="asOfDate">Calculate status as of</label>
+          <input id="asOfDate" type="date" />
+          <button id="todayBtn" class="button small secondary">Use Today</button>
+        </div>
+        <div class="search-control">
+          <label for="dashboardSearch">Search</label>
+          <input id="dashboardSearch" type="search" placeholder="Facility or building number" />
+        </div>
+      </div>
+
+      <div id="summaryCards" class="summary-grid"></div>
+
+      <div class="filter-grid">
+        <div>
+          <label for="installationFilter">Installation</label>
+          <select id="installationFilter"><option value="">All installations</option></select>
+        </div>
+        <div>
+          <label for="agencyFilter">Agency</label>
+          <select id="agencyFilter"><option value="">All agencies</option></select>
+        </div>
+        <div>
+          <label for="inspectorFilter">Inspector</label>
+          <select id="inspectorFilter"><option value="">All inspectors</option></select>
+        </div>
+        <div>
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter">
+            <option value="">All statuses</option>
+            <option value="OVERDUE">Overdue</option>
+            <option value="DUE_TODAY">Due Today</option>
+            <option value="DUE_SOON">Due Soon</option>
+            <option value="UPCOMING">Upcoming</option>
+            <option value="NO_HISTORY">No Inspection History</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-heading">
+          <div>
+            <h2>Inspection Requirements</h2>
+            <p>Sorted by urgency, with the earliest due requirement first.</p>
+          </div>
+          <span id="recordCount" class="record-count"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Facility</th>
+                <th>Installation</th>
+                <th>Agency</th>
+                <th>Inspector</th>
+                <th>Frequency</th>
+                <th>Last Conducted</th>
+                <th>Next Due</th>
+                <th>Countdown</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="trackerTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="facilities" class="tab-panel">
+      <div class="split-layout">
+        <div class="form-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">FACILITY RECORD</p>
+              <h2 id="facilityFormTitle">Add Facility</h2>
+            </div>
+            <button id="cancelEditBtn" class="button small secondary hidden">Cancel Edit</button>
+          </div>
+          <form id="facilityForm">
+            <input id="facilityId" type="hidden" />
+            <div class="form-grid">
+              <div class="full-width">
+                <label for="facilityName">Facility name *</label>
+                <input id="facilityName" required maxlength="100" />
+              </div>
+              <div>
+                <label for="buildingNumber">Building number *</label>
+                <input id="buildingNumber" required maxlength="30" />
+              </div>
+              <div>
+                <label for="installation">Installation *</label>
+                <input id="installation" required maxlength="80" />
+              </div>
+              <div>
+                <label for="agency">Agency *</label>
+                <select id="agency" required>
+                  <option value="">Select agency</option>
+                  <option>AAFES</option>
+                  <option>DECA</option>
+                  <option>MWR</option>
+                  <option>Dining Facility</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div>
+                <label for="assignedInspector">Assigned inspector</label>
+                <input id="assignedInspector" maxlength="80" placeholder="Optional" />
+              </div>
+              <div>
+                <label for="frequency">Inspection frequency *</label>
+                <select id="frequency" required>
+                  <option value="">Select frequency</option>
+                  <option value="DAILY">Daily</option>
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="QUARTERLY">Quarterly</option>
+                  <option value="BIANNUAL">Biannual</option>
+                  <option value="ANNUAL">Annual</option>
+                </select>
+              </div>
+              <div>
+                <label for="lastConductedDate">Last inspection conducted</label>
+                <input id="lastConductedDate" type="date" />
+              </div>
+              <div class="checkbox-row">
+                <input id="active" type="checkbox" checked />
+                <label for="active">Active facility</label>
+              </div>
+            </div>
+            <div id="duplicateWarning" class="warning-box hidden"></div>
+            <button class="button primary" type="submit">Save Facility</button>
+          </form>
+        </div>
+
+        <div class="table-card">
+          <div class="table-heading">
+            <div>
+              <h2>Saved Facilities</h2>
+              <p>One active inspection frequency per facility.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Facility</th>
+                  <th>Building</th>
+                  <th>Installation</th>
+                  <th>Agency</th>
+                  <th>Frequency</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="facilityTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="calendar" class="tab-panel">
+      <div class="split-layout">
+        <div class="form-card">
+          <p class="eyebrow">NON-DUTY DAYS</p>
+          <h2>Add Training Holiday or Local Closure</h2>
+          <p class="muted">Federal holidays and weekends are calculated automatically. Add installation or command-specific non-duty days here.</p>
+          <form id="holidayForm">
+            <div class="form-grid">
+              <div>
+                <label for="holidayDate">Date *</label>
+                <input id="holidayDate" type="date" required />
+              </div>
+              <div>
+                <label for="holidayName">Name *</label>
+                <input id="holidayName" required maxlength="100" placeholder="Training Holiday" />
+              </div>
+              <div class="full-width">
+                <label for="holidayScope">Installation or organization</label>
+                <input id="holidayScope" maxlength="100" placeholder="All / installation / unit" />
+              </div>
+            </div>
+            <button class="button primary" type="submit">Add Non-Duty Day</button>
+          </form>
+        </div>
+
+        <div class="table-card">
+          <div class="table-heading">
+            <div>
+              <h2>Custom Business Calendar</h2>
+              <p>Used only for daily inspection calculations in v0.1.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Name</th>
+                  <th>Scope</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="holidayTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="test-guide" class="tab-panel">
+      <div class="guide-card">
+        <p class="eyebrow">USER ACCEPTANCE TESTING</p>
+        <h2>Recommended Test Scenarios</h2>
+        <ol class="test-list">
+          <li><strong>Monthly countdown:</strong> Create a monthly facility with a recent conducted date and confirm the next due date uses one calendar month.</li>
+          <li><strong>Month-end handling:</strong> Use January 31 and confirm February resolves to the last valid day of the month.</li>
+          <li><strong>Daily weekend rule:</strong> Use a Friday conducted date and confirm the next due date is Monday.</li>
+          <li><strong>Daily holiday rule:</strong> Add Monday as a training holiday, use the preceding Friday, and confirm the due date moves to Tuesday.</li>
+          <li><strong>Due-soon status:</strong> Change the “Calculate status as of” date to test each frequency threshold.</li>
+          <li><strong>Overdue status:</strong> Move the as-of date past the due date and confirm the tracker shows business days overdue for daily requirements.</li>
+          <li><strong>Duplicate warning:</strong> Add two facilities with the same name on the same installation and confirm a warning appears.</li>
+          <li><strong>Inactive facility:</strong> Mark a facility inactive and confirm it disappears from the dashboard.</li>
+          <li><strong>Backup and restore:</strong> Export JSON, delete or change a record, then restore the file.</li>
+        </ol>
+        <div class="callout">
+          <strong>Document defects in GitHub:</strong> Record the test setup, expected result, actual result, screenshots, and the decision made after testing.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="inspectionDialog">
+    <form id="inspectionForm" method="dialog">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">RECORD COMPLETION</p>
+          <h2 id="inspectionDialogTitle">Record Inspection</h2>
+        </div>
+        <button id="closeInspectionDialog" class="icon-button" type="button" aria-label="Close">×</button>
+      </div>
+      <input id="inspectionFacilityId" type="hidden" />
+      <label for="conductedDate">Date inspection was conducted *</label>
+      <input id="conductedDate" type="date" required />
+      <p class="muted">This date becomes the basis for the next due date.</p>
+      <div class="dialog-actions">
+        <button class="button secondary" type="button" id="cancelInspectionBtn">Cancel</button>
+        <button class="button primary" type="submit">Save Conducted Date</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js").catch((error) => {
+          console.warn("Service worker registration failed:", error);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
