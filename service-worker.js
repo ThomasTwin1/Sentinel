@@ -1,4 +1,4 @@
-const CACHE_NAME = "sentinel-tracker-v0.1.1";
+const CACHE_NAME = "sentinel-tracker-v0.1.2";
 const APP_SHELL = [
   "./",
   "./index.html",

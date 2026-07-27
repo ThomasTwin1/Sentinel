@@ -103,11 +103,40 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
 .summary-card { padding: 18px; }
 .summary-card .label { color: var(--text-muted); font-size: 0.86rem; font-weight: 700; }
 .summary-card .value { display: block; margin-top: 6px; font-size: 2rem; font-weight: 850; }
-.summary-card.overdue { border-left: 5px solid var(--danger); }
-.summary-card.today { border-left: 5px solid var(--warning); }
-.summary-card.soon { border-left: 5px solid #b78b2e; }
-.summary-card.upcoming { border-left: 5px solid var(--success); }
-.summary-card.total { border-left: 5px solid var(--info); }
+
+/* Due-status key: the summary cards now explain what each status means. */
+.summary-card::after {
+  display: block;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+.summary-card.overdue { border-left: 5px solid var(--danger); background: var(--danger-soft); }
+.summary-card.overdue::after {
+  content: "Due date has passed. Complete as soon as possible.";
+  color: var(--danger);
+}
+.summary-card.today { border-left: 5px solid var(--warning); background: #fff0e0; }
+.summary-card.today::after {
+  content: "Due today. Complete or confirm the inspection submission.";
+  color: var(--warning);
+}
+.summary-card.soon { border-left: 5px solid #b78b2e; background: var(--warning-soft); }
+.summary-card.soon::after {
+  content: "Warning window: weekly 1–2 days, monthly 1–7, quarterly 1–14.";
+  color: #745112;
+}
+.summary-card.upcoming { border-left: 5px solid var(--success); background: var(--success-soft); }
+.summary-card.upcoming::after {
+  content: "Outside the warning window. Continue monitoring.";
+  color: var(--success);
+}
+.summary-card.total { border-left: 5px solid var(--info); background: var(--info-soft); }
+.summary-card.total::after {
+  content: "All active facility requirements currently tracked.";
+  color: var(--info);
+}
 
 .table-card { overflow: hidden; }
 .table-heading, .section-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
@@ -125,10 +154,10 @@ td { font-size: 0.92rem; }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 9px; font-size: 0.76rem; font-weight: 800; white-space: nowrap; }
-.badge.overdue { color: var(--danger); background: var(--danger-soft); }
-.badge.today { color: var(--warning); background: var(--warning-soft); }
-.badge.soon { color: #745112; background: #fff0bf; }
-.badge.upcoming { color: var(--success); background: var(--success-soft); }
+.badge.overdue { color: var(--danger); background: var(--danger-soft); border: 1px solid #e4aaa5; }
+.badge.today { color: var(--warning); background: #fff0e0; border: 1px solid #e7bd86; }
+.badge.soon { color: #745112; background: #fff0bf; border: 1px solid #e1c36e; }
+.badge.upcoming { color: var(--success); background: var(--success-soft); border: 1px solid #acd0b8; }
 .badge.no-history { color: var(--info); background: var(--info-soft); }
 .badge.inactive { color: #666; background: #ecefed; }
 
