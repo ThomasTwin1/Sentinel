@@ -103,8 +103,6 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
 .summary-card { padding: 18px; }
 .summary-card .label { color: var(--text-muted); font-size: 0.86rem; font-weight: 700; }
 .summary-card .value { display: block; margin-top: 6px; font-size: 2rem; font-weight: 850; }
-
-/* Due-status key: the summary cards now explain what each status means. */
 .summary-card::after {
   display: block;
   margin-top: 8px;
@@ -113,30 +111,51 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
   line-height: 1.35;
 }
 .summary-card.overdue { border-left: 5px solid var(--danger); background: var(--danger-soft); }
-.summary-card.overdue::after {
-  content: "Due date has passed. Complete as soon as possible.";
-  color: var(--danger);
-}
+.summary-card.overdue::after { content: "Due date has passed."; color: var(--danger); }
 .summary-card.today { border-left: 5px solid var(--warning); background: #fff0e0; }
-.summary-card.today::after {
-  content: "Due today. Complete or confirm the inspection submission.";
-  color: var(--warning);
-}
+.summary-card.today::after { content: "Due today."; color: var(--warning); }
 .summary-card.soon { border-left: 5px solid #b78b2e; background: var(--warning-soft); }
-.summary-card.soon::after {
-  content: "Warning window: weekly 1–2 days, monthly 1–7, quarterly 1–14.";
-  color: #745112;
-}
+.summary-card.soon::after { content: "Inside the warning window."; color: #745112; }
 .summary-card.upcoming { border-left: 5px solid var(--success); background: var(--success-soft); }
-.summary-card.upcoming::after {
-  content: "Outside the warning window. Continue monitoring.";
-  color: var(--success);
-}
+.summary-card.upcoming::after { content: "Outside the warning window."; color: var(--success); }
 .summary-card.total { border-left: 5px solid var(--info); background: var(--info-soft); }
-.summary-card.total::after {
-  content: "All active facility requirements currently tracked.";
-  color: var(--info);
+.summary-card.total::after { content: "All active facilities."; color: var(--info); }
+
+.status-key {
+  margin-bottom: 18px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
 }
+.status-key-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+.status-key-heading h2,
+.status-key-heading p { margin-bottom: 0; }
+.status-key-heading p { color: var(--text-muted); font-size: 0.88rem; }
+.status-key-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 10px;
+}
+.status-key-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+}
+.status-key-item span { font-size: 0.8rem; line-height: 1.35; }
+.status-key-item.overdue { color: var(--danger); background: var(--danger-soft); border-color: #e4aaa5; }
+.status-key-item.today { color: var(--warning); background: #fff0e0; border-color: #e7bd86; }
+.status-key-item.soon { color: #745112; background: #fff0bf; border-color: #e1c36e; }
+.status-key-item.upcoming { color: var(--success); background: var(--success-soft); border-color: #acd0b8; }
 
 .table-card { overflow: hidden; }
 .table-heading, .section-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
@@ -154,12 +173,23 @@ td { font-size: 0.92rem; }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 9px; font-size: 0.76rem; font-weight: 800; white-space: nowrap; }
-.badge.overdue { color: var(--danger); background: var(--danger-soft); border: 1px solid #e4aaa5; }
-.badge.today { color: var(--warning); background: #fff0e0; border: 1px solid #e7bd86; }
-.badge.soon { color: #745112; background: #fff0bf; border: 1px solid #e1c36e; }
-.badge.upcoming { color: var(--success); background: var(--success-soft); border: 1px solid #acd0b8; }
+.badge.overdue { color: var(--danger); background: var(--danger-soft); }
+.badge.today { color: var(--warning); background: var(--warning-soft); }
+.badge.soon { color: #745112; background: #fff0bf; }
+.badge.upcoming { color: var(--success); background: var(--success-soft); }
 .badge.no-history { color: var(--info); background: var(--info-soft); }
 .badge.inactive { color: #666; background: #ecefed; }
+
+.days-to-due {
+  font-weight: 850;
+  text-align: center;
+  border-radius: 7px;
+}
+.days-to-due.overdue { color: var(--danger); background: var(--danger-soft); }
+.days-to-due.today { color: var(--warning); background: #fff0e0; }
+.days-to-due.soon { color: #745112; background: #fff0bf; }
+.days-to-due.upcoming { color: var(--success); background: var(--success-soft); }
+.days-to-due.no-history { color: var(--info); background: var(--info-soft); }
 
 .form-card, .guide-card { padding: 22px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
@@ -178,6 +208,7 @@ input:focus, select:focus { outline: 3px solid rgba(36,75,53,0.12); border-color
 .checkbox-row { display: flex; align-items: center; gap: 9px; }
 .checkbox-row input { width: auto; min-height: auto; }
 .checkbox-row label { margin: 0; }
+.field-help { margin: 6px 0 0; color: var(--text-muted); font-size: 0.76rem; line-height: 1.35; }
 .warning-box { margin-bottom: 14px; padding: 12px; border: 1px solid #e4c264; border-radius: 8px; background: var(--warning-soft); color: #63460f; }
 .hidden { display: none !important; }
 
@@ -215,6 +246,7 @@ input:focus, select:focus { outline: 3px solid rgba(36,75,53,0.12); border-color
 @media (max-width: 1100px) {
   .summary-grid { grid-template-columns: repeat(3, 1fr); }
   .filter-grid { grid-template-columns: repeat(2, 1fr); }
+  .status-key-grid { grid-template-columns: repeat(2, 1fr); }
   .split-layout { grid-template-columns: 1fr; }
 }
 
@@ -223,7 +255,8 @@ input:focus, select:focus { outline: 3px solid rgba(36,75,53,0.12); border-color
   .header-actions { justify-content: flex-start; }
   .toolbar { grid-template-columns: 1fr; }
   .as-of-control, .search-control { grid-template-columns: 1fr; align-items: stretch; }
-  .summary-grid, .filter-grid, .form-grid { grid-template-columns: 1fr; }
+  .summary-grid, .filter-grid, .form-grid, .status-key-grid { grid-template-columns: 1fr; }
+  .status-key-heading { align-items: flex-start; flex-direction: column; }
   .full-width { grid-column: auto; }
   main { padding-left: 12px; padding-right: 12px; }
 }

@@ -1,7 +1,7 @@
 {
-  "name": "Sentinel Upcoming Food Inspection Tracker",
-  "short_name": "Sentinel Tracker",
-  "description": "A portfolio prototype for tracking upcoming food inspection due dates.",
+  "name": "Sentinel Facility Due-Date Tracker",
+  "short_name": "Sentinel",
+  "description": "A portfolio prototype for tracking food facility inspection due dates.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

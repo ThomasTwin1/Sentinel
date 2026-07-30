@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Sentinel Tracker" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <title>Sentinel Upcoming Inspection Tracker v0.1</title>
+  <title>Sentinel Upcoming Inspection Tracker v0.2.1</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -21,6 +21,10 @@
     </div>
     <div class="header-actions">
       <button id="loadDemoBtn" class="button secondary">Load Demo Data</button>
+      <label class="button secondary file-label">
+        Import Inspection CSV
+        <input id="importCsvInput" type="file" accept=".csv,text/csv" hidden />
+      </label>
       <button id="exportCsvBtn" class="button secondary">Export CSV</button>
       <button id="exportJsonBtn" class="button secondary">Backup JSON</button>
       <label class="button secondary file-label">
@@ -57,6 +61,19 @@
 
       <div id="summaryCards" class="summary-grid"></div>
 
+      <section class="status-key" aria-labelledby="statusKeyTitle">
+        <div class="status-key-heading">
+          <h2 id="statusKeyTitle">Due Status Key</h2>
+          <p>Days to Due uses one signed number: negative means overdue, 0 means due today, and positive means days remaining.</p>
+        </div>
+        <div class="status-key-grid">
+          <div class="status-key-item overdue"><strong>Overdue</strong><span>Below 0 — due date has passed.</span></div>
+          <div class="status-key-item today"><strong>Due Today</strong><span>0 — complete or confirm today.</span></div>
+          <div class="status-key-item soon"><strong>Due Soon</strong><span>Weekly 1–2, Monthly 1–7, Quarterly 1–14 days.</span></div>
+          <div class="status-key-item upcoming"><strong>Upcoming</strong><span>Outside the warning window.</span></div>
+        </div>
+      </section>
+
       <div class="filter-grid">
         <div>
           <label for="installationFilter">Installation</label>
@@ -81,13 +98,21 @@
             <option value="NO_HISTORY">No Inspection History</option>
           </select>
         </div>
+        <div>
+          <label for="sortMode">Arrange facilities by</label>
+          <select id="sortMode">
+            <option value="URGENCY">Urgency — most overdue first</option>
+            <option value="BUILDING">Building number — lowest first</option>
+            <option value="NAME">Facility name — A to Z</option>
+          </select>
+        </div>
       </div>
 
       <div class="table-card">
         <div class="table-heading">
           <div>
             <h2>Inspection Requirements</h2>
-            <p>Sorted by urgency, with the earliest due requirement first.</p>
+            <p id="sortDescription">Sorted by urgency, with the most overdue requirement first.</p>
           </div>
           <span id="recordCount" class="record-count"></span>
         </div>
@@ -100,9 +125,9 @@
                 <th>Agency</th>
                 <th>Inspector</th>
                 <th>Frequency</th>
-                <th>Last Conducted</th>
-                <th>Next Due</th>
-                <th>Countdown</th>
+                <th>Last Inspected</th>
+                <th>Due Date</th>
+                <th>Days to Due</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -146,6 +171,7 @@
                   <option>DECA</option>
                   <option>MWR</option>
                   <option>Dining Facility</option>
+                  <option>DoDEA</option>
                   <option>Other</option>
                 </select>
               </div>
@@ -166,8 +192,9 @@
                 </select>
               </div>
               <div>
-                <label for="lastConductedDate">Last inspection conducted</label>
+                <label for="lastConductedDate">Last inspected date</label>
                 <input id="lastConductedDate" type="date" />
+                <p class="field-help">For CSV imports, Sentinel uses the latest inspection date listed for each facility, regardless of workflow status.</p>
               </div>
               <div class="checkbox-row">
                 <input id="active" type="checkbox" checked />
@@ -260,12 +287,14 @@
         <p class="eyebrow">USER ACCEPTANCE TESTING</p>
         <h2>Recommended Test Scenarios</h2>
         <ol class="test-list">
-          <li><strong>Monthly countdown:</strong> Create a monthly facility with a recent conducted date and confirm the next due date uses one calendar month.</li>
+          <li><strong>Monthly due date:</strong> Use July 1 and confirm the due date is August 1.</li>
           <li><strong>Month-end handling:</strong> Use January 31 and confirm February resolves to the last valid day of the month.</li>
           <li><strong>Daily weekend rule:</strong> Use a Friday conducted date and confirm the next due date is Monday.</li>
           <li><strong>Daily holiday rule:</strong> Add Monday as a training holiday, use the preceding Friday, and confirm the due date moves to Tuesday.</li>
-          <li><strong>Due-soon status:</strong> Change the “Calculate status as of” date to test each frequency threshold.</li>
-          <li><strong>Overdue status:</strong> Move the as-of date past the due date and confirm the tracker shows business days overdue for daily requirements.</li>
+          <li><strong>Signed Days to Due:</strong> Confirm future requirements show positive numbers, today shows 0, and overdue requirements show negative numbers.</li>
+          <li><strong>Due-soon status:</strong> Confirm Weekly uses 1–2 days, Monthly uses 1–7 days, and Quarterly uses 1–14 days.</li>
+          <li><strong>CSV import:</strong> Import a sanitized FPAR export and confirm the latest dated record is used for each facility, regardless of workflow status.</li>
+          <li><strong>Sorting:</strong> Confirm Urgency places the most overdue first and Building Number places the lowest building first.</li>
           <li><strong>Duplicate warning:</strong> Add two facilities with the same name on the same installation and confirm a warning appears.</li>
           <li><strong>Inactive facility:</strong> Mark a facility inactive and confirm it disappears from the dashboard.</li>
           <li><strong>Backup and restore:</strong> Export JSON, delete or change a record, then restore the file.</li>
@@ -289,7 +318,7 @@
       <input id="inspectionFacilityId" type="hidden" />
       <label for="conductedDate">Date inspection was conducted *</label>
       <input id="conductedDate" type="date" required />
-      <p class="muted">This date becomes the basis for the next due date.</p>
+      <p class="muted">This date becomes the Last Inspected date and the basis for the next due date.</p>
       <div class="dialog-actions">
         <button class="button secondary" type="button" id="cancelInspectionBtn">Cancel</button>
         <button class="button primary" type="submit">Save Conducted Date</button>

@@ -1,69 +1,67 @@
-# Sentinel Upcoming Food Inspection Tracker v0.1
+# Sentinel Facility Due-Date Tracker v0.2.1
 
-A dependency-free browser prototype for validating Sentinel's first MVP feature: showing how many days remain before food inspections become overdue.
+A dependency-free browser prototype for validating Sentinel's first MVP feature: showing which food facilities are overdue, due today, due soon, or upcoming.
 
-## What this prototype does
+## Working criteria in v0.2
 
-- Adds and edits fictional facility records.
-- Supports Daily, Weekly, Monthly, Quarterly, Biannual, and Annual frequencies.
-- Calculates due dates from the date the inspection was conducted.
-- Uses calendar months for Monthly, Quarterly, Biannual, and Annual requirements.
-- Excludes weekends, U.S. federal holidays, and custom non-duty days from Daily calculations.
-- Shows business days remaining or overdue for Daily requirements.
-- Shows calendar days remaining or overdue for all other frequencies.
-- Applies frequency-based Due Soon thresholds.
-- Searches and filters the tracker.
-- Warns about possible duplicate facility names on the same installation.
-- Saves data in browser local storage.
-- Exports CSV and JSON backups.
-- Restores JSON backups.
-- Includes a test-date override for user acceptance testing.
+- **Last Inspected** uses the latest inspection date listed for each facility.
+- Workflow status does not affect the countdown; Draft, Submitted, and Accepted rows are treated the same for date selection.
+- **Weekly** requirements are due 7 calendar days after Last Inspected.
+- **Monthly** requirements are due 1 calendar month after Last Inspected.
+- **Quarterly** requirements are due 3 calendar months after Last Inspected.
+- **Days to Due** uses one signed number:
+  - Negative = overdue
+  - 0 = due today
+  - Positive = days remaining
+- Due Soon warning windows:
+  - Weekly: 1–2 days
+  - Monthly: 1–7 days
+  - Quarterly: 1–14 days
+- Dashboard sorting options:
+  - Urgency — most overdue first
+  - Building number — lowest first
+  - Facility name — A to Z
+- Saved Facilities are arranged by building number.
 
-## Run it on Windows
+## CSV import
 
-1. Unzip the folder.
+The **Import Inspection CSV** button accepts a VSIMS/FPAR-style CSV export.
+
+The importer:
+
+- Locates the header row automatically.
+- Reads Installation, Agency, Facility, and Date.
+- Uses the latest dated row for each facility, regardless of workflow status.
+- Does not use workflow status to determine what is coming due.
+- Does not store Prepared By or Reviewed By names.
+- Applies the current working frequency mapping:
+  - Dining Facility, DFAC, SSMO, Army Troop Feeding, and Hospital Commander = Weekly
+  - Mobile food trucks = Quarterly
+  - All other imported facilities = Monthly
+
+## Security limitation
+
+This repository is public and the GitHub Pages application is not an approved Army information system.
+
+Do not upload real facility schedules, CUI, PII, names, credentials, or operational data to the repository. Use the included fictional CSV for public testing. Operational exports should remain local and should only be used in an authorized environment.
+
+## Run locally
+
+1. Download or clone the repository.
 2. Open `index.html` in Microsoft Edge, Chrome, or Firefox.
-3. Select **Load Demo Data** for fictional examples, or create your own sanitized test records.
+3. Load fictional demo data or import `sentinel-sanitized-import-demo.csv`.
+4. Confirm due dates, signed Days to Due, colors, sorting, and filters.
 
-No installation, server, or internet connection is required.
+## Test
 
-## Important security limitation
+Run:
 
-This is a local portfolio prototype, not an approved Army information system. Do not enter:
+```bash
+node test-date-logic.js
+```
 
-- CUI
-- PII
-- Real inspection records
-- Real POC information
-- Credentials
-- Operationally sensitive information
+The tests cover monthly month-end behavior, weekly and quarterly calculations, signed overdue values, federal holidays, and imported frequency mapping.
 
-Use fictional or sanitized data only.
+## Architecture
 
-## Current assumptions to test
-
-- One active inspection frequency per facility.
-- Daily means the next business day.
-- Daily excludes weekends, federal holidays, and user-entered non-duty days.
-- Weekly and longer frequencies use calendar dates.
-- Due Soon thresholds:
-  - Daily: Due Today
-  - Weekly: 2 days
-  - Monthly: 7 days
-  - Quarterly: 14 days
-  - Biannual: 30 days
-  - Annual: 60 days
-- The conducted date, not the report approval date, drives the next due date.
-
-## Recommended GitHub workflow
-
-1. Create or update the `Build Upcoming Inspection Tracker` issue.
-2. Test each scenario in the in-app Test Guide.
-3. Create bug issues for incorrect behavior.
-4. Record expected result, actual result, reproduction steps, and screenshots.
-5. Revise the requirements when testing reveals an operational rule that was missed.
-6. After validation, rebuild the feature in the planned React, TypeScript, Spring Boot, and PostgreSQL architecture.
-
-## Prototype architecture
-
-This v0.1 build intentionally uses plain HTML, CSS, and JavaScript so it can be tested immediately without installing development tools. It is a product-validation prototype, not the final Sentinel architecture.
+This v0.2 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. Data remains in browser local storage. Shared team access still requires a secure backend, authentication, permissions, and an approved hosting environment.

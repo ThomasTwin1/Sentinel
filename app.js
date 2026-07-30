@@ -28,9 +28,9 @@
 
   function cacheElements() {
     [
-      "loadDemoBtn", "exportCsvBtn", "exportJsonBtn", "importJsonInput",
+      "loadDemoBtn", "importCsvInput", "exportCsvBtn", "exportJsonBtn", "importJsonInput",
       "asOfDate", "todayBtn", "dashboardSearch", "installationFilter",
-      "agencyFilter", "inspectorFilter", "statusFilter", "summaryCards",
+      "agencyFilter", "inspectorFilter", "statusFilter", "sortMode", "sortDescription", "summaryCards",
       "recordCount", "trackerTableBody", "facilityForm", "facilityId",
       "facilityName", "buildingNumber", "installation", "agency",
       "assignedInspector", "frequency", "lastConductedDate", "active",
@@ -57,7 +57,7 @@
     els.closeInspectionDialog.addEventListener("click", closeInspectionDialog);
     els.cancelInspectionBtn.addEventListener("click", closeInspectionDialog);
 
-    [els.dashboardSearch, els.installationFilter, els.agencyFilter, els.inspectorFilter, els.statusFilter]
+    [els.dashboardSearch, els.installationFilter, els.agencyFilter, els.inspectorFilter, els.statusFilter, els.sortMode]
       .forEach(el => el.addEventListener("input", renderDashboard));
 
     els.asOfDate.addEventListener("change", () => {
@@ -73,6 +73,7 @@
     });
 
     els.loadDemoBtn.addEventListener("click", loadDemoData);
+    els.importCsvInput.addEventListener("change", importInspectionCsv);
     els.exportJsonBtn.addEventListener("click", exportJson);
     els.importJsonInput.addEventListener("change", importJson);
     els.exportCsvBtn.addEventListener("click", exportCsv);
@@ -111,7 +112,14 @@
       .filter(f => f.active)
       .map(f => ({ facility: f, schedule: calculateSchedule(f, asOfDate, state.customHolidays) }))
       .filter(matchesDashboardFilters)
-      .sort((a, b) => sortValue(a.schedule) - sortValue(b.schedule) || a.facility.name.localeCompare(b.facility.name));
+      .sort(compareDashboardRows);
+
+    const sortDescriptions = {
+      URGENCY: "Sorted by urgency, with the most overdue requirement first.",
+      BUILDING: "Sorted by building number, from lowest to highest.",
+      NAME: "Sorted alphabetically by facility name."
+    };
+    els.sortDescription.textContent = sortDescriptions[els.sortMode.value] || sortDescriptions.URGENCY;
 
     const allActiveSchedules = state.facilities.filter(f => f.active).map(f => calculateSchedule(f, asOfDate, state.customHolidays));
     renderSummaryCards(allActiveSchedules);
@@ -131,7 +139,7 @@
         <td>${FREQUENCIES[facility.frequency]?.label || facility.frequency}</td>
         <td>${facility.lastConductedDate ? formatDate(parseISO(facility.lastConductedDate)) : "—"}</td>
         <td>${schedule.nextDue ? formatDate(schedule.nextDue) : "—"}</td>
-        <td>${escapeHtml(schedule.countdownLabel)}</td>
+        <td class="days-to-due ${statusClass(schedule.status)}">${schedule.status === "NO_HISTORY" ? "—" : schedule.daysToDue}</td>
         <td>${statusBadge(schedule.status)}</td>
         <td><button class="button small primary" data-action="record" data-id="${facility.id}">Record Inspection</button></td>
       </tr>
@@ -174,13 +182,41 @@
       && (!els.statusFilter.value || schedule.status === els.statusFilter.value);
   }
 
-  function sortValue(schedule) {
-    if (schedule.status === "NO_HISTORY") return Number.MAX_SAFE_INTEGER;
-    return schedule.daysRemaining;
+  function compareDashboardRows(a, b) {
+    const mode = els.sortMode?.value || "URGENCY";
+    if (mode === "BUILDING") {
+      return compareBuildingNumbers(a.facility.buildingNumber, b.facility.buildingNumber)
+        || a.facility.name.localeCompare(b.facility.name);
+    }
+    if (mode === "NAME") {
+      return a.facility.name.localeCompare(b.facility.name);
+    }
+
+    const aValue = a.schedule.status === "NO_HISTORY" ? Number.MAX_SAFE_INTEGER : a.schedule.daysToDue;
+    const bValue = b.schedule.status === "NO_HISTORY" ? Number.MAX_SAFE_INTEGER : b.schedule.daysToDue;
+    return aValue - bValue
+      || compareBuildingNumbers(a.facility.buildingNumber, b.facility.buildingNumber)
+      || a.facility.name.localeCompare(b.facility.name);
+  }
+
+  function compareBuildingNumbers(a, b) {
+    const aKey = buildingSortKey(a);
+    const bKey = buildingSortKey(b);
+    if (aKey.group !== bKey.group) return aKey.group - bKey.group;
+    if (aKey.number !== bKey.number) return aKey.number - bKey.number;
+    return aKey.text.localeCompare(bKey.text);
+  }
+
+  function buildingSortKey(value) {
+    const text = String(value || "").trim();
+    const match = text.match(/\d+/);
+    if (match) return { group: 0, number: Number(match[0]), text };
+    if (text.toUpperCase() === "MOBILE") return { group: 1, number: Number.MAX_SAFE_INTEGER, text };
+    return { group: 2, number: Number.MAX_SAFE_INTEGER, text };
   }
 
   function renderFacilities() {
-    const sorted = [...state.facilities].sort((a, b) => a.name.localeCompare(b.name));
+    const sorted = [...state.facilities].sort((a, b) => compareBuildingNumbers(a.buildingNumber, b.buildingNumber) || a.name.localeCompare(b.name));
     if (!sorted.length) {
       els.facilityTableBody.innerHTML = `<tr><td class="empty-row" colspan="7">No facilities saved yet.</td></tr>`;
       return;
@@ -407,29 +443,35 @@
 
   function calculateSchedule(facility, asOf, customHolidays) {
     if (!facility.lastConductedDate) {
-      return { status: "NO_HISTORY", nextDue: null, daysRemaining: Number.MAX_SAFE_INTEGER, countdownLabel: "No inspection history" };
+      return {
+        status: "NO_HISTORY",
+        nextDue: null,
+        daysToDue: Number.MAX_SAFE_INTEGER,
+        daysRemaining: Number.MAX_SAFE_INTEGER,
+        countdownLabel: "No inspection history"
+      };
     }
+
     const lastConducted = parseISO(facility.lastConductedDate);
     const nextDue = calculateNextDue(lastConducted, facility.frequency, customHolidays);
     const daily = facility.frequency === "DAILY";
-    const daysRemaining = daily
+    const daysToDue = daily
       ? businessDayDifference(asOf, nextDue, customHolidays)
       : calendarDayDifference(asOf, nextDue);
 
     let status;
-    if (daysRemaining < 0) status = "OVERDUE";
-    else if (daysRemaining === 0) status = "DUE_TODAY";
-    else if (daysRemaining <= (FREQUENCIES[facility.frequency]?.dueSoon ?? 0)) status = "DUE_SOON";
+    if (daysToDue < 0) status = "OVERDUE";
+    else if (daysToDue === 0) status = "DUE_TODAY";
+    else if (daysToDue <= (FREQUENCIES[facility.frequency]?.dueSoon ?? 0)) status = "DUE_SOON";
     else status = "UPCOMING";
 
-    const unit = daily ? "business day" : "day";
-    const absolute = Math.abs(daysRemaining);
-    let countdownLabel;
-    if (daysRemaining < 0) countdownLabel = `${absolute} ${pluralize(unit, absolute)} overdue`;
-    else if (daysRemaining === 0) countdownLabel = "Due today";
-    else countdownLabel = `${daysRemaining} ${pluralize(unit, daysRemaining)} remaining`;
-
-    return { status, nextDue, daysRemaining, countdownLabel };
+    return {
+      status,
+      nextDue,
+      daysToDue,
+      daysRemaining: daysToDue,
+      countdownLabel: String(daysToDue)
+    };
   }
 
   function calculateNextDue(lastConducted, frequency, customHolidays) {
@@ -544,11 +586,11 @@
     const today = startOfDay(new Date());
     state = {
       facilities: [
-        demoFacility("Freedom Dining Facility", "100", "Example Installation Korea", "Dining Facility", "Inspector Alpha", "MONTHLY", toISO(addDays(today, -40))),
-        demoFacility("Liberty Exchange Food Court", "220", "Example Installation Korea", "AAFES", "Inspector Bravo", "QUARTERLY", toISO(addDays(today, -80))),
-        demoFacility("Patriot Commissary", "310", "Example Installation Korea", "DECA", "Inspector Alpha", "ANNUAL", toISO(addDays(today, -320))),
-        demoFacility("Warrior Snack Bar", "415", "Example Installation Korea", "MWR", "Inspector Charlie", "WEEKLY", toISO(addDays(today, -5))),
-        demoFacility("Readiness Dining Facility", "520", "Example Installation Korea", "Dining Facility", "Inspector Bravo", "DAILY", toISO(previousBusinessDay(today, [])))
+        demoFacility("Freedom Dining Facility", "100", "Example Installation Korea", "Dining Facility", "Inspector Alpha", "WEEKLY", toISO(addDays(today, -14))),
+        demoFacility("Liberty Exchange Food Court", "220", "Example Installation Korea", "AAFES", "Inspector Bravo", "MONTHLY", toISO(addDays(today, -27))),
+        demoFacility("Patriot Commissary", "310", "Example Installation Korea", "DECA", "Inspector Alpha", "MONTHLY", toISO(addDays(today, -31))),
+        demoFacility("Warrior Snack Bar", "415", "Example Installation Korea", "MWR", "Inspector Charlie", "MONTHLY", toISO(addDays(today, -10))),
+        demoFacility("Mobile BBQ Truck", "MOBILE", "Example Installation Korea", "AAFES", "Inspector Bravo", "QUARTERLY", toISO(addDays(today, -82)))
       ],
       customHolidays: [],
       audit: []
@@ -567,6 +609,202 @@
     let candidate = addDays(date, -1);
     while (!isBusinessDay(candidate, customHolidays)) candidate = addDays(candidate, -1);
     return candidate;
+  }
+
+  async function importInspectionCsv(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    try {
+      const rows = parseCsv(await file.text());
+      const headerIndex = rows.findIndex(row => {
+        const normalized = row.map(value => normalizeHeader(value));
+        return normalized.includes("facility")
+          && normalized.includes("date")
+          && normalized.includes("agency");
+      });
+
+      if (headerIndex < 0) {
+        throw new Error("Could not find the inspection CSV column header row.");
+      }
+
+      const headers = rows[headerIndex].map(value => String(value || "").trim());
+      const headerMap = Object.fromEntries(headers.map((header, index) => [normalizeHeader(header), index]));
+      const required = ["installation", "agency", "facility", "date"];
+      const missing = required.filter(name => headerMap[name] === undefined);
+      if (missing.length) {
+        throw new Error(`Missing required columns: ${missing.join(", ")}`);
+      }
+
+      const grouped = new Map();
+      let datedRowsConsidered = 0;
+
+      rows.slice(headerIndex + 1).forEach(row => {
+        const facilityName = String(row[headerMap.facility] || "").trim();
+        const sourceAgency = String(row[headerMap.agency] || "").trim();
+        const installation = String(row[headerMap.installation] || "").trim();
+        const inspectedDate = parseFparDate(String(row[headerMap.date] || "").trim());
+
+        if (!facilityName || !sourceAgency || !installation || !inspectedDate) return;
+        datedRowsConsidered += 1;
+
+        // Sentinel is a workload-visibility tool. Use the latest inspection date
+        // listed for each facility, regardless of workflow status.
+        const key = `${normalize(installation)}|${normalize(sourceAgency)}|${normalize(facilityName)}`;
+        const current = grouped.get(key);
+        if (!current || inspectedDate > current.inspectedDate) {
+          grouped.set(key, {
+            facilityName,
+            sourceAgency,
+            installation,
+            inspectedDate
+          });
+        }
+      });
+
+      if (!grouped.size) {
+        throw new Error("No dated inspection records were found.");
+      }
+
+      if (state.facilities.length && !confirm(
+        `Replace the ${state.facilities.length} facilities currently stored in this browser with ${grouped.size} facilities from this CSV?\n\nExport a JSON backup first if needed.`
+      )) {
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const importedFacilities = [...grouped.values()].map(record => ({
+        id: crypto.randomUUID(),
+        name: record.facilityName,
+        buildingNumber: extractBuildingNumber(record.facilityName),
+        installation: record.installation,
+        agency: normalizeAgency(record.sourceAgency, record.facilityName),
+        assignedInspector: "",
+        frequency: inferImportFrequency(record.sourceAgency, record.facilityName),
+        lastConductedDate: toISO(record.inspectedDate),
+        active: true,
+        createdAt: now,
+        updatedAt: now
+      }));
+
+      state = {
+        facilities: importedFacilities,
+        customHolidays: state.customHolidays || [],
+        audit: state.audit || []
+      };
+
+      addAudit("FPAR_CSV_IMPORTED", crypto.randomUUID(), null, {
+        fileName: file.name,
+        facilitiesImported: importedFacilities.length,
+        datedRowsConsidered,
+        dateSelectionRule: "Latest inspection date listed for each facility, regardless of workflow status",
+        importedAt: now
+      });
+
+      saveState();
+      renderAll();
+      showToast(`${importedFacilities.length} facilities imported. Latest inspection dates were used.`);
+    } catch (error) {
+      alert(`Could not import inspection CSV: ${error.message}`);
+    }
+  }
+
+  function inferImportFrequency(sourceAgency, facilityName) {
+    const name = String(facilityName || "");
+    const agency = String(sourceAgency || "");
+
+    if (/\b(mobile|truck)\b/i.test(name)) return "QUARTERLY";
+    if (
+      /\bdfac\b/i.test(name)
+      || /\bdining\s+facility\b/i.test(name)
+      || /\bssmo\b/i.test(name)
+      || agency === "Army Troop Feeding"
+      || agency === "Hospital Commander"
+    ) {
+      return "WEEKLY";
+    }
+    return "MONTHLY";
+  }
+
+  function normalizeAgency(sourceAgency, facilityName) {
+    if (sourceAgency === "Army Air Force Exchange Service") return "AAFES";
+    if (sourceAgency === "Defense Commissary Agency") return "DECA";
+    if (sourceAgency === "Morale Welfare & Recreation") return "MWR";
+    if (sourceAgency === "Department of Defense Dependent Schools") return "DoDEA";
+    if (
+      sourceAgency === "Army Troop Feeding"
+      || sourceAgency === "Hospital Commander"
+      || /\bdfac\b|\bdining\s+facility\b/i.test(facilityName)
+    ) {
+      return "Dining Facility";
+    }
+    return "Other";
+  }
+
+  function extractBuildingNumber(facilityName) {
+    const name = String(facilityName || "").trim();
+
+    if (/(mobile|truck)/i.test(name) && !/(?:bldg|building)/i.test(name)) {
+      return "MOBILE";
+    }
+
+    const labeled = name.match(/\b(?:bldg|bldg\.|building|#bldg|bldg:)\s*[:#-]?\s*([PS]-?\d+(?:\/\d+)?|\d+(?:\/\d+)?)/i);
+    if (labeled) return labeled[1].replace(/\s+/g, "");
+
+    const trailing = name.match(/\b(\d{3,5})\s*$/);
+    return trailing ? trailing[1] : "";
+  }
+
+  function parseFparDate(value) {
+    const match = String(value || "").trim().match(/^([A-Za-z]{3})\s+(\d{1,2}),\s+(\d{4})$/);
+    if (!match) return null;
+
+    const monthIndex = {
+      Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+      Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
+    }[match[1]];
+
+    if (monthIndex === undefined) return null;
+    return new Date(Number(match[3]), monthIndex, Number(match[2]));
+  }
+
+  function normalizeHeader(value) {
+    return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let inQuotes = false;
+
+    for (let index = 0; index < text.length; index += 1) {
+      const char = text[index];
+      const next = text[index + 1];
+
+      if (char === '"' && inQuotes && next === '"') {
+        field += '"';
+        index += 1;
+      } else if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === "," && !inQuotes) {
+        row.push(field);
+        field = "";
+      } else if ((char === "\n" || char === "\r") && !inQuotes) {
+        if (char === "\r" && next === "\n") index += 1;
+        row.push(field);
+        if (row.some(value => value !== "")) rows.push(row);
+        row = [];
+        field = "";
+      } else {
+        field += char;
+      }
+    }
+
+    row.push(field);
+    if (row.some(value => value !== "")) rows.push(row);
+    return rows;
   }
 
   function exportJson() {
@@ -592,13 +830,32 @@
   }
 
   function exportCsv() {
-    const headers = ["Facility", "Building Number", "Installation", "Agency", "Assigned Inspector", "Frequency", "Last Conducted", "Next Due", "Countdown", "Status"];
-    const rows = state.facilities.filter(f => f.active).map(f => {
-      const schedule = calculateSchedule(f, asOfDate, state.customHolidays);
-      return [f.name, f.buildingNumber, f.installation, f.agency, f.assignedInspector || "Unassigned", FREQUENCIES[f.frequency]?.label || f.frequency, f.lastConductedDate || "", schedule.nextDue ? toISO(schedule.nextDue) : "", schedule.countdownLabel, schedule.status];
-    });
+    const headers = ["Facility", "Building Number", "Installation", "Agency", "Assigned Inspector", "Frequency", "Last Inspected", "Due Date", "Days to Due", "Status"];
+    const rows = state.facilities
+      .filter(f => f.active)
+      .map(f => {
+        const schedule = calculateSchedule(f, asOfDate, state.customHolidays);
+        return [
+          f.name,
+          f.buildingNumber,
+          f.installation,
+          f.agency,
+          f.assignedInspector || "Unassigned",
+          FREQUENCIES[f.frequency]?.label || f.frequency,
+          f.lastConductedDate || "",
+          schedule.nextDue ? toISO(schedule.nextDue) : "",
+          schedule.status === "NO_HISTORY" ? "" : schedule.daysToDue,
+          schedule.status
+        ];
+      })
+      .sort((a, b) => {
+        const aDays = a[8] === "" ? Number.MAX_SAFE_INTEGER : Number(a[8]);
+        const bDays = b[8] === "" ? Number.MAX_SAFE_INTEGER : Number(b[8]);
+        return aDays - bDays;
+      });
+
     const csv = [headers, ...rows].map(row => row.map(csvEscape).join(",")).join("\n");
-    downloadFile(`sentinel-upcoming-inspections-${toISO(asOfDate)}.csv`, csv, "text/csv;charset=utf-8");
+    downloadFile(`sentinel-inspection-readiness-${toISO(asOfDate)}.csv`, csv, "text/csv;charset=utf-8");
     showToast("CSV exported.");
   }
 
@@ -617,6 +874,16 @@
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+  }
+
+  function statusClass(status) {
+    return {
+      OVERDUE: "overdue",
+      DUE_TODAY: "today",
+      DUE_SOON: "soon",
+      UPCOMING: "upcoming",
+      NO_HISTORY: "no-history"
+    }[status] || "no-history";
   }
 
   function statusBadge(status) {
