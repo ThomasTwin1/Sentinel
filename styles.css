@@ -91,7 +91,7 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
 .as-of-control { display: grid; grid-template-columns: auto minmax(150px, 220px) auto; align-items: end; gap: 8px; }
 .search-control { display: grid; grid-template-columns: auto minmax(180px, 1fr); align-items: center; gap: 10px; }
 .filter-grid { grid-template-columns: repeat(4, minmax(150px, 1fr)); margin-bottom: 18px; }
-.summary-grid { grid-template-columns: repeat(5, minmax(140px, 1fr)); margin-bottom: 18px; }
+.summary-grid { grid-template-columns: repeat(3, minmax(180px, 1fr)); margin-bottom: 18px; }
 .split-layout { grid-template-columns: minmax(320px, 0.8fr) minmax(480px, 1.4fr); align-items: start; }
 
 .summary-card, .table-card, .form-card, .guide-card {
@@ -101,6 +101,35 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
   box-shadow: var(--shadow);
 }
 .summary-card { padding: 18px; }
+.summary-card {
+  width: 100%;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+.summary-card:hover { transform: translateY(-2px); }
+.summary-card:active { transform: translateY(0); }
+.summary-card:focus-visible {
+  outline: 4px solid rgba(36, 75, 53, 0.2);
+  outline-offset: 3px;
+}
+.summary-card.selected {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(36, 75, 53, 0.14), var(--shadow);
+}
+.summary-card .card-action {
+  display: inline-flex;
+  margin-top: 12px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+#inspectionRequirements:focus { outline: none; }
+
 .summary-card .label { color: var(--text-muted); font-size: 0.86rem; font-weight: 700; }
 .summary-card .value { display: block; margin-top: 6px; font-size: 2rem; font-weight: 850; }
 .summary-card::after {
@@ -120,6 +149,15 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
 .summary-card.upcoming::after { content: "Outside the warning window."; color: var(--success); }
 .summary-card.total { border-left: 5px solid var(--info); background: var(--info-soft); }
 .summary-card.total::after { content: "All active facilities."; color: var(--info); }
+
+.summary-card.access {
+  border-left: 5px solid #7a3f80;
+  background: #f3eaf5;
+}
+.summary-card.access::after {
+  content: "Access is currently restricted.";
+  color: #604068;
+}
 
 .status-key {
   margin-bottom: 18px;
@@ -141,21 +179,44 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
 .status-key-heading p { color: var(--text-muted); font-size: 0.88rem; }
 .status-key-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  grid-template-columns: repeat(5, minmax(160px, 1fr));
   gap: 10px;
 }
 .status-key-item {
   display: grid;
+  width: 100%;
+  appearance: none;
   gap: 4px;
   padding: 12px;
   border-radius: 9px;
   border: 1px solid transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+.status-key-item:hover { transform: translateY(-2px); }
+.status-key-item:active { transform: translateY(0); }
+.status-key-item:focus-visible {
+  outline: 4px solid rgba(36, 75, 53, 0.18);
+  outline-offset: 3px;
+}
+.status-key-item.selected {
+  box-shadow: 0 0 0 3px rgba(36, 75, 53, 0.14), var(--shadow);
 }
 .status-key-item span { font-size: 0.8rem; line-height: 1.35; }
+.status-key-item .key-action {
+  margin-top: 6px;
+  font-weight: 850;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .status-key-item.overdue { color: var(--danger); background: var(--danger-soft); border-color: #e4aaa5; }
 .status-key-item.today { color: var(--warning); background: #fff0e0; border-color: #e7bd86; }
 .status-key-item.soon { color: #745112; background: #fff0bf; border-color: #e1c36e; }
 .status-key-item.upcoming { color: var(--success); background: var(--success-soft); border-color: #acd0b8; }
+.status-key-item.access { color: #604068; background: #f3eaf5; border-color: #cfb6d5; }
 
 .table-card { overflow: hidden; }
 .table-heading, .section-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
@@ -259,4 +320,1822 @@ input:focus, select:focus { outline: 3px solid rgba(36,75,53,0.12); border-color
   .status-key-heading { align-items: flex-start; flex-direction: column; }
   .full-width { grid-column: auto; }
   main { padding-left: 12px; padding-right: 12px; }
+}
+
+
+/* Mobile priority layout: show the decision-critical fields beside each facility. */
+@media (max-width: 760px) {
+  .inspection-table {
+    display: block;
+    min-width: 0;
+  }
+
+  .inspection-table thead {
+    display: none;
+  }
+
+  .inspection-table tbody {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .inspection-table .inspection-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(138px, 0.9fr);
+    grid-template-areas:
+      "facility days"
+      "facility status"
+      "facility access"
+      "facility last"
+      "facility due"
+      "installation agency"
+      "inspector frequency"
+      "action action";
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: 0 5px 16px rgba(25, 45, 32, 0.07);
+  }
+
+  .inspection-table .inspection-row > td {
+    display: grid;
+    align-content: center;
+    min-width: 0;
+    padding: 11px 12px;
+    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+  }
+
+  .inspection-table .inspection-row > td::before {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-muted);
+    content: attr(data-label);
+    font-size: 0.65rem;
+    font-weight: 850;
+    letter-spacing: 0.06em;
+    line-height: 1.15;
+    text-transform: uppercase;
+  }
+
+  .inspection-table .facility-cell {
+    grid-area: facility;
+    align-content: start;
+    border-top: 0;
+    border-right: 1px solid var(--border);
+    background: #f8faf8;
+  }
+
+  .inspection-table .facility-cell::before {
+    margin-bottom: 8px;
+  }
+
+  .inspection-table .facility-cell .table-primary {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  .inspection-table .facility-cell .table-secondary {
+    margin-top: 8px;
+    line-height: 1.3;
+  }
+
+  .inspection-table .days-to-due {
+    grid-area: days;
+    border-top: 0;
+    border-radius: 0;
+    text-align: left;
+    font-size: 1.28rem;
+  }
+
+  .inspection-table .status-cell {
+    grid-area: status;
+  }
+
+  .inspection-table .access-cell {
+    grid-area: access;
+  }
+
+  .inspection-table .last-inspected-cell {
+    grid-area: last;
+  }
+
+  .inspection-table .due-date-cell {
+    grid-area: due;
+  }
+
+  .inspection-table .installation-cell {
+    grid-area: installation;
+  }
+
+  .inspection-table .agency-cell {
+    grid-area: agency;
+    border-left: 1px solid var(--border);
+  }
+
+  .inspection-table .inspector-cell {
+    grid-area: inspector;
+  }
+
+  .inspection-table .frequency-cell {
+    grid-area: frequency;
+    border-left: 1px solid var(--border);
+  }
+
+  .inspection-table .action-cell {
+    grid-area: action;
+  }
+
+  .inspection-table .action-cell .button {
+    width: 100%;
+  }
+
+  .inspection-table .empty-row {
+    display: block;
+    padding: 30px 18px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .inspection-table .empty-row::before {
+    content: none;
+  }
+}
+
+
+@media (max-width: 760px) {
+  .summary-card {
+    min-height: 190px;
+    touch-action: manipulation;
+  }
+
+  .summary-card .card-action {
+    font-size: 0.86rem;
+  }
+}
+
+
+.inspection-table .inspection-row {
+  scroll-margin-top: 12px;
+}
+
+
+.print-only { display: none; }
+
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 0.38in;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  body.printing-cards .app-header,
+  body.printing-cards .security-banner,
+  body.printing-cards .tabs,
+  body.printing-cards .toolbar,
+  body.printing-cards .summary-grid,
+  body.printing-cards .status-key,
+  body.printing-cards .filter-grid,
+  body.printing-cards .table-heading,
+  body.printing-cards #facilities,
+  body.printing-cards #calendar,
+  body.printing-cards #test-guide,
+  body.printing-cards .action-cell,
+  body.printing-cards #toast,
+  body.printing-cards dialog {
+    display: none !important;
+  }
+
+  body.printing-cards main {
+    padding: 0 !important;
+  }
+
+  body.printing-cards #dashboard,
+  body.printing-cards #inspectionRequirements,
+  body.printing-cards .table-wrap,
+  body.printing-cards .inspection-table,
+  body.printing-cards .inspection-table tbody {
+    display: block !important;
+  }
+
+  body.printing-cards #inspectionRequirements {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  body.printing-cards .print-only {
+    display: block !important;
+  }
+
+  body.printing-cards #printHeader {
+    margin-bottom: 0.22in;
+    padding-bottom: 0.12in;
+    border-bottom: 2px solid var(--brand);
+  }
+
+  body.printing-cards #printHeader h1 {
+    margin: 0 0 4px;
+    color: var(--brand-dark);
+    font-size: 18pt;
+  }
+
+  body.printing-cards #printHeader p {
+    margin: 2px 0 0;
+    color: #3c493f;
+    font-size: 8.5pt;
+  }
+
+  body.printing-cards #printHeader .print-warning {
+    color: #654811;
+    font-weight: 750;
+  }
+
+  body.printing-cards .inspection-table {
+    min-width: 0 !important;
+  }
+
+  body.printing-cards .inspection-table thead {
+    display: none !important;
+  }
+
+  body.printing-cards .inspection-table tbody {
+    column-count: 2;
+    column-gap: 0.18in;
+    padding: 0 !important;
+  }
+
+  body.printing-cards .inspection-table .inspection-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(1.15in, 0.8fr);
+    grid-template-areas:
+      "facility days"
+      "facility status"
+      "facility access"
+      "facility last"
+      "facility due"
+      "installation agency"
+      "inspector frequency";
+    width: 100%;
+    margin: 0 0 0.16in;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #b9c5bc;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  body.printing-cards .inspection-table .inspection-row > td {
+    display: grid !important;
+    align-content: center;
+    min-width: 0;
+    padding: 7px 8px;
+    border-top: 1px solid #d7ded8;
+    font-size: 7.8pt;
+    overflow-wrap: anywhere;
+  }
+
+  body.printing-cards .inspection-table .inspection-row > td::before {
+    display: block;
+    margin-bottom: 2px;
+    color: #5c675f;
+    content: attr(data-label);
+    font-size: 5.8pt;
+    font-weight: 850;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  body.printing-cards .inspection-table .facility-cell {
+    grid-area: facility;
+    align-content: start;
+    border-top: 0;
+    border-right: 1px solid #d7ded8;
+    background: #f8faf8;
+  }
+
+  body.printing-cards .inspection-table .facility-cell .table-primary {
+    font-size: 9.2pt;
+    line-height: 1.2;
+  }
+
+  body.printing-cards .inspection-table .facility-cell .table-secondary {
+    margin-top: 4px;
+    font-size: 7pt;
+    line-height: 1.2;
+  }
+
+  body.printing-cards .inspection-table .days-to-due {
+    grid-area: days;
+    border-top: 0;
+    border-radius: 0;
+    text-align: left;
+    font-size: 12pt;
+  }
+
+  body.printing-cards .inspection-table .status-cell { grid-area: status; }
+  body.printing-cards .inspection-table .access-cell { grid-area: access; }
+  body.printing-cards .inspection-table .last-inspected-cell { grid-area: last; }
+  body.printing-cards .inspection-table .due-date-cell { grid-area: due; }
+  body.printing-cards .inspection-table .installation-cell { grid-area: installation; }
+  body.printing-cards .inspection-table .agency-cell {
+    grid-area: agency;
+    border-left: 1px solid #d7ded8;
+  }
+  body.printing-cards .inspection-table .inspector-cell { grid-area: inspector; }
+  body.printing-cards .inspection-table .frequency-cell {
+    grid-area: frequency;
+    border-left: 1px solid #d7ded8;
+  }
+
+  body.printing-cards .badge {
+    padding: 3px 6px;
+    font-size: 6.5pt;
+  }
+
+  body.printing-cards .access-detail,
+  body.printing-cards .facility-access-alert {
+    font-size: 6.2pt;
+  }
+
+
+  body.printing-cards .empty-row {
+    display: block !important;
+    padding: 24px;
+    border: 1px solid #d7ded8;
+    border-radius: 8px;
+  }
+
+  body.printing-cards .empty-row::before {
+    content: none !important;
+  }
+}
+
+
+.badge.accessible {
+  color: #486052;
+  background: #eef3ef;
+  border-color: #cad6cd;
+}
+.badge.inaccessible {
+  color: #6a2c70;
+  background: #f3e7f5;
+  border-color: #cda9d2;
+}
+.access-stack {
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+}
+.access-detail {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+.facility-access-alert {
+  display: block;
+  margin-top: 10px;
+  padding: 7px 8px;
+  border-left: 3px solid #7a3f80;
+  border-radius: 5px;
+  color: #5a2f60;
+  background: #f5edf6;
+  font-size: 0.76rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+
+.milsans-heading {
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+.milsans-summary-grid {
+  margin-bottom: 18px;
+}
+.summary-card.milsans-total {
+  border-left: 5px solid #2a628f;
+  background: #eaf3fb;
+}
+.summary-card.milsans-total::after {
+  content: "Latest completed ratings.";
+  color: #24587f;
+}
+.summary-card.milsans-fully {
+  border-left: 5px solid #287746;
+  background: #e7f4eb;
+}
+.summary-card.milsans-fully::after {
+  content: "Fully compliant rating.";
+  color: #246c40;
+}
+.summary-card.milsans-substantial {
+  border-left: 5px solid #bd8a18;
+  background: #fff4cf;
+}
+.summary-card.milsans-substantial::after {
+  content: "Substantially compliant rating.";
+  color: #7d5a12;
+}
+.summary-card.milsans-partial {
+  border-left: 5px solid #b86d13;
+  background: #ffedd9;
+}
+.summary-card.milsans-partial::after {
+  content: "Partially compliant rating.";
+  color: #8b510f;
+}
+.summary-card.milsans-non {
+  border-left: 5px solid #aa302d;
+  background: #fbe8e7;
+}
+.summary-card.milsans-non::after {
+  content: "Non-compliant rating.";
+  color: #9d2d2a;
+}
+.summary-card.milsans-followup {
+  border-left: 5px solid #74437b;
+  background: #f3eaf5;
+}
+.summary-card.milsans-followup::after {
+  content: "A follow-up is required.";
+  color: #62396a;
+}
+.badge.milsans-fully {
+  color: #246c40;
+  background: #e7f4eb;
+  border-color: #acd0b8;
+}
+.badge.milsans-substantial {
+  color: #7d5a12;
+  background: #fff4cf;
+  border-color: #dfc06c;
+}
+.badge.milsans-partial {
+  color: #8b510f;
+  background: #ffedd9;
+  border-color: #dfb174;
+}
+.badge.milsans-non {
+  color: #9d2d2a;
+  background: #fbe8e7;
+  border-color: #dfa5a3;
+}
+.badge.milsans-followup {
+  color: #62396a;
+  background: #f3eaf5;
+  border-color: #cfb6d5;
+}
+.milsans-rating-key {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.milsans-key-item {
+  display: grid;
+  width: 100%;
+  appearance: none;
+  gap: 5px;
+  padding: 13px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.milsans-key-item:hover { transform: translateY(-2px); }
+.milsans-key-item:active { transform: translateY(0); }
+.milsans-key-item:focus-visible {
+  outline: 4px solid rgba(36, 75, 53, 0.18);
+  outline-offset: 3px;
+}
+.milsans-key-item.selected {
+  box-shadow: 0 0 0 3px rgba(36, 75, 53, 0.14), var(--shadow);
+}
+.milsans-key-item span {
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+.milsans-key-item .key-action {
+  margin-top: 5px;
+  font-weight: 850;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.milsans-key-item.fully {
+  color: #246c40;
+  background: #e7f4eb;
+  border-color: #acd0b8;
+}
+.milsans-key-item.substantially {
+  color: #7d5a12;
+  background: #fff4cf;
+  border-color: #dfc06c;
+}
+.milsans-key-item.partially {
+  color: #8b510f;
+  background: #ffedd9;
+  border-color: #dfb174;
+}
+.milsans-key-item.noncompliant {
+  color: #9d2d2a;
+  background: #fbe8e7;
+  border-color: #dfa5a3;
+}
+.milsans-table .milsans-row {
+  scroll-margin-top: 12px;
+}
+.milsans-facility-cell .table-secondary {
+  margin-top: 4px;
+}
+
+
+@media (max-width: 760px) {
+  .milsans-rating-key {
+    grid-template-columns: 1fr;
+  }
+
+  .milsans-table {
+    min-width: 0;
+  }
+
+  .milsans-table thead {
+    display: none;
+  }
+
+  .milsans-table tbody {
+    display: grid;
+    gap: 14px;
+    padding: 12px;
+  }
+
+  .milsans-table .milsans-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(118px, 0.7fr);
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "date date"
+      "critical noncritical"
+      "cos ihh"
+      "followup survey";
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .milsans-table .milsans-row > td {
+    display: grid;
+    align-content: center;
+    min-width: 0;
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    overflow-wrap: anywhere;
+  }
+
+  .milsans-table .milsans-row > td::before {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-muted);
+    content: attr(data-label);
+    font-size: 0.67rem;
+    font-weight: 850;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .milsans-table .milsans-row > td:nth-child(1) {
+    grid-area: facility;
+    align-content: start;
+    border-top: 0;
+    border-right: 1px solid var(--border);
+    background: #f8faf8;
+  }
+  .milsans-table .milsans-row > td:nth-child(2) {
+    grid-area: date;
+  }
+  .milsans-table .milsans-row > td:nth-child(3) {
+    grid-area: rating;
+  }
+  .milsans-table .milsans-row > td:nth-child(4) {
+    grid-area: grade;
+    border-top: 0;
+  }
+  .milsans-table .milsans-row > td:nth-child(5) { grid-area: critical; }
+  .milsans-table .milsans-row > td:nth-child(6) {
+    grid-area: noncritical;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-table .milsans-row > td:nth-child(7) { grid-area: cos; }
+  .milsans-table .milsans-row > td:nth-child(8) {
+    grid-area: ihh;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-table .milsans-row > td:nth-child(9) { grid-area: followup; }
+  .milsans-table .milsans-row > td:nth-child(10) {
+    grid-area: survey;
+    border-left: 1px solid var(--border);
+  }
+}
+
+
+.milsans-policy-note {
+  margin-bottom: 18px;
+  padding: 13px 15px;
+  border: 1px solid #c8d4ca;
+  border-left: 5px solid var(--brand);
+  border-radius: 10px;
+  color: #33453a;
+  background: #f5f8f5;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.milsans-grade-cell {
+  text-align: center;
+}
+.tsfc-grade-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 2px solid currentColor;
+  border-radius: 12px;
+  font-size: 1.55rem;
+  font-weight: 950;
+  line-height: 1;
+}
+.tsfc-grade-badge.grade-a {
+  color: #246c40;
+  background: #e7f4eb;
+}
+.tsfc-grade-badge.grade-b {
+  color: #7d5a12;
+  background: #fff4cf;
+}
+.tsfc-grade-badge.grade-c {
+  color: #8b510f;
+  background: #ffedd9;
+}
+.tsfc-grade-badge.grade-f {
+  color: #9d2d2a;
+  background: #fbe8e7;
+}
+.tsfc-grade-badge.grade-none {
+  color: #667169;
+  background: #eef0ee;
+}
+
+
+.dashboard-source-control {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--brand);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.dashboard-source-control > div { min-width: 220px; }
+.dashboard-source-control p { margin: 0; max-width: 620px; }
+.dashboard-source-panel { margin-bottom: 24px; }
+.source-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 14px;
+}
+.source-section-heading h2 { margin: 0; }
+.milsans-due-filter-grid { grid-template-columns: repeat(4, minmax(170px, 1fr)); }
+.milsans-due-row { scroll-margin-top: 12px; }
+.milsans-due-facility .table-secondary { margin-top: 4px; }
+
+@media (max-width: 760px) {
+  .dashboard-source-control {
+    display: grid;
+    align-items: stretch;
+  }
+  .dashboard-source-control > div { min-width: 0; }
+  .milsans-due-filter-grid { grid-template-columns: 1fr; }
+  .milsans-due-table { min-width: 0; }
+  .milsans-due-table thead { display: none; }
+  .milsans-due-table tbody {
+    display: grid;
+    gap: 14px;
+    padding: 12px;
+  }
+  .milsans-due-table .milsans-due-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(118px, 0.72fr);
+    grid-template-areas:
+      "facility days"
+      "facility status"
+      "facility grade"
+      "last inspector"
+      "due routine"
+      "scheduled followup"
+      "basis basis";
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .milsans-due-table .milsans-due-row > td {
+    display: grid;
+    align-content: center;
+    min-width: 0;
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    overflow-wrap: anywhere;
+  }
+  .milsans-due-table .milsans-due-row > td::before {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-muted);
+    content: attr(data-label);
+    font-size: 0.67rem;
+    font-weight: 850;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(1) {
+    grid-area: facility;
+    align-content: start;
+    border-top: 0;
+    border-right: 1px solid var(--border);
+    background: #f8faf8;
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(2) { grid-area: days; border-top: 0; }
+  .milsans-due-table .milsans-due-row > td:nth-child(3) { grid-area: status; }
+  .milsans-due-table .milsans-due-row > td:nth-child(4) { grid-area: grade; }
+  .milsans-due-table .milsans-due-row > td:nth-child(5) { grid-area: last; }
+  .milsans-due-table .milsans-due-row > td:nth-child(6) { grid-area: inspector; border-left: 1px solid var(--border); }
+  .milsans-due-table .milsans-due-row > td:nth-child(7) { grid-area: due; }
+  .milsans-due-table .milsans-due-row > td:nth-child(8) { grid-area: routine; border-left: 1px solid var(--border); }
+  .milsans-due-table .milsans-due-row > td:nth-child(9) { grid-area: scheduled; }
+  .milsans-due-table .milsans-due-row > td:nth-child(10) { grid-area: followup; border-left: 1px solid var(--border); }
+  .milsans-due-table .milsans-due-row > td:nth-child(11) { grid-area: basis; }
+}
+
+@media (max-width: 760px) {
+  .milsans-table .milsans-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "inspector creator"
+      "days status"
+      "due scheduled"
+      "date date"
+      "critical noncritical"
+      "cos ihh"
+      "followup survey";
+  }
+  .milsans-table .milsans-row > td:nth-child(2) { grid-area: date; }
+  .milsans-table .milsans-row > td:nth-child(3) { grid-area: inspector; }
+  .milsans-table .milsans-row > td:nth-child(4) { grid-area: creator; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(5) { grid-area: rating; }
+  .milsans-table .milsans-row > td:nth-child(6) { grid-area: grade; border-top: 0; }
+  .milsans-table .milsans-row > td:nth-child(7) { grid-area: days; }
+  .milsans-table .milsans-row > td:nth-child(8) { grid-area: status; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(9) { grid-area: due; }
+  .milsans-table .milsans-row > td:nth-child(10) { grid-area: scheduled; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(11) { grid-area: critical; }
+  .milsans-table .milsans-row > td:nth-child(12) { grid-area: noncritical; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(13) { grid-area: cos; }
+  .milsans-table .milsans-row > td:nth-child(14) { grid-area: ihh; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(15) { grid-area: followup; }
+  .milsans-table .milsans-row > td:nth-child(16) { grid-area: survey; border-left: 1px solid var(--border); }
+}
+
+
+@media print {
+  body.printing-cards.print-mode-fpar #milsansDashboardPanel,
+  body.printing-cards.print-mode-fpar #milsans {
+    display: none !important;
+  }
+
+  body.printing-cards.print-mode-milsans-due #fparDashboardPanel,
+  body.printing-cards.print-mode-milsans-due #milsans {
+    display: none !important;
+  }
+
+  body.printing-cards.print-mode-milsans-results #dashboard > *:not(#printHeader),
+  body.printing-cards.print-mode-milsans-results #facilities,
+  body.printing-cards.print-mode-milsans-results #calendar,
+  body.printing-cards.print-mode-milsans-results #test-guide {
+    display: none !important;
+  }
+
+  body.printing-cards.print-mode-combined #milsans {
+    display: none !important;
+  }
+
+  body.printing-cards.print-mode-milsans-due #dashboard,
+  body.printing-cards.print-mode-milsans-due #milsansDashboardPanel,
+  body.printing-cards.print-mode-milsans-due #milsansDueRequirements,
+  body.printing-cards.print-mode-milsans-due .milsans-due-table,
+  body.printing-cards.print-mode-milsans-due .milsans-due-table tbody,
+  body.printing-cards.print-mode-combined #dashboard,
+  body.printing-cards.print-mode-combined #fparDashboardPanel,
+  body.printing-cards.print-mode-combined #milsansDashboardPanel,
+  body.printing-cards.print-mode-combined #milsansDueRequirements,
+  body.printing-cards.print-mode-combined .milsans-due-table,
+  body.printing-cards.print-mode-combined .milsans-due-table tbody,
+  body.printing-cards.print-mode-milsans-results #dashboard,
+  body.printing-cards.print-mode-milsans-results #milsans,
+  body.printing-cards.print-mode-milsans-results #milsansResults,
+  body.printing-cards.print-mode-milsans-results .milsans-table,
+  body.printing-cards.print-mode-milsans-results .milsans-table tbody {
+    display: block !important;
+  }
+
+  body.printing-cards .milsans-due-table,
+  body.printing-cards .milsans-table {
+    min-width: 0 !important;
+  }
+
+  body.printing-cards .milsans-due-table thead,
+  body.printing-cards .milsans-table thead {
+    display: none !important;
+  }
+
+  body.printing-cards .milsans-due-table tbody,
+  body.printing-cards .milsans-table tbody {
+    column-count: 2;
+    column-gap: 0.18in;
+    padding: 0 !important;
+  }
+
+  body.printing-cards .milsans-due-row,
+  body.printing-cards .milsans-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(1.05in, 0.72fr);
+    width: 100%;
+    margin: 0 0 0.16in;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #b9c5bc;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  body.printing-cards .milsans-due-row {
+    grid-template-areas:
+      "facility days"
+      "facility status"
+      "facility grade"
+      "last inspector"
+      "due scheduled"
+      "routine followup"
+      "basis basis";
+  }
+
+  body.printing-cards .milsans-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "inspector creator"
+      "days status"
+      "due scheduled"
+      "date date"
+      "critical noncritical"
+      "cos ihh"
+      "followup survey";
+  }
+
+  body.printing-cards .milsans-due-row > td,
+  body.printing-cards .milsans-row > td {
+    display: grid !important;
+    align-content: center;
+    min-width: 0;
+    padding: 7px 8px;
+    border-top: 1px solid #d7ded8;
+    font-size: 7.3pt;
+    overflow-wrap: anywhere;
+  }
+
+  body.printing-cards .milsans-due-row > td::before,
+  body.printing-cards .milsans-row > td::before {
+    display: block;
+    margin-bottom: 2px;
+    color: #5c675f;
+    content: attr(data-label);
+    font-size: 5.5pt;
+    font-weight: 850;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  body.printing-cards .milsans-due-row > td:nth-child(1),
+  body.printing-cards .milsans-row > td:nth-child(1) {
+    grid-area: facility;
+    align-content: start;
+    border-top: 0;
+    border-right: 1px solid #d7ded8;
+    background: #f8faf8;
+  }
+
+  body.printing-cards .milsans-due-row > td:nth-child(2) { grid-area: days; border-top: 0; }
+  body.printing-cards .milsans-due-row > td:nth-child(3) { grid-area: status; }
+  body.printing-cards .milsans-due-row > td:nth-child(4) { grid-area: grade; }
+  body.printing-cards .milsans-due-row > td:nth-child(5) { grid-area: last; }
+  body.printing-cards .milsans-due-row > td:nth-child(6) { grid-area: inspector; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-due-row > td:nth-child(7) { grid-area: due; }
+  body.printing-cards .milsans-due-row > td:nth-child(8) { grid-area: routine; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-due-row > td:nth-child(9) { grid-area: scheduled; }
+  body.printing-cards .milsans-due-row > td:nth-child(10) { grid-area: followup; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-due-row > td:nth-child(11) { grid-area: basis; }
+
+  body.printing-cards .milsans-row > td:nth-child(2) { grid-area: date; }
+  body.printing-cards .milsans-row > td:nth-child(3) { grid-area: inspector; }
+  body.printing-cards .milsans-row > td:nth-child(4) { grid-area: creator; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-row > td:nth-child(5) { grid-area: rating; }
+  body.printing-cards .milsans-row > td:nth-child(6) { grid-area: grade; border-top: 0; }
+  body.printing-cards .milsans-row > td:nth-child(7) { grid-area: days; }
+  body.printing-cards .milsans-row > td:nth-child(8) { grid-area: status; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-row > td:nth-child(9) { grid-area: due; }
+  body.printing-cards .milsans-row > td:nth-child(10) { grid-area: scheduled; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-row > td:nth-child(11) { grid-area: critical; }
+  body.printing-cards .milsans-row > td:nth-child(12) { grid-area: noncritical; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-row > td:nth-child(13) { grid-area: cos; }
+  body.printing-cards .milsans-row > td:nth-child(14) { grid-area: ihh; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-row > td:nth-child(15) { grid-area: followup; }
+  body.printing-cards .milsans-row > td:nth-child(16) { grid-area: survey; border-left: 1px solid #d7ded8; }
+
+  body.printing-cards .tsfc-grade-badge {
+    width: 34px;
+    height: 34px;
+    font-size: 1.1rem;
+    border-radius: 8px;
+  }
+
+  body.printing-cards.print-mode-combined #milsansDashboardPanel {
+    margin-top: 0.28in;
+    break-before: page;
+    page-break-before: always;
+  }
+}
+
+
+@media (max-width: 760px) {
+  .milsans-due-table .milsans-due-row {
+    grid-template-areas:
+      "facility days"
+      "facility status"
+      "facility grade"
+      "last inspector"
+      "scheduled followup";
+  }
+
+  .milsans-due-table .milsans-due-row > td:nth-child(1) { grid-area: facility; }
+  .milsans-due-table .milsans-due-row > td:nth-child(2) { grid-area: days; }
+  .milsans-due-table .milsans-due-row > td:nth-child(3) { grid-area: status; }
+  .milsans-due-table .milsans-due-row > td:nth-child(4) { grid-area: grade; }
+  .milsans-due-table .milsans-due-row > td:nth-child(5) { grid-area: last; }
+  .milsans-due-table .milsans-due-row > td:nth-child(6) {
+    grid-area: inspector;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(7) { grid-area: scheduled; }
+  .milsans-due-table .milsans-due-row > td:nth-child(8) {
+    grid-area: followup;
+    border-left: 1px solid var(--border);
+  }
+
+  .milsans-table .milsans-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "inspector creator"
+      "days status"
+      "scheduled scheduled"
+      "date date"
+      "critical noncritical"
+      "cos ihh"
+      "followup survey";
+  }
+
+  .milsans-table .milsans-row > td:nth-child(1) { grid-area: facility; }
+  .milsans-table .milsans-row > td:nth-child(2) { grid-area: date; }
+  .milsans-table .milsans-row > td:nth-child(3) { grid-area: inspector; }
+  .milsans-table .milsans-row > td:nth-child(4) {
+    grid-area: creator;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-table .milsans-row > td:nth-child(5) { grid-area: rating; }
+  .milsans-table .milsans-row > td:nth-child(6) { grid-area: grade; }
+  .milsans-table .milsans-row > td:nth-child(7) { grid-area: days; }
+  .milsans-table .milsans-row > td:nth-child(8) {
+    grid-area: status;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-table .milsans-row > td:nth-child(9) { grid-area: scheduled; }
+  .milsans-table .milsans-row > td:nth-child(10) { grid-area: critical; }
+  .milsans-table .milsans-row > td:nth-child(11) {
+    grid-area: noncritical;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-table .milsans-row > td:nth-child(12) { grid-area: cos; }
+  .milsans-table .milsans-row > td:nth-child(13) {
+    grid-area: ihh;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-table .milsans-row > td:nth-child(14) { grid-area: followup; }
+  .milsans-table .milsans-row > td:nth-child(15) {
+    grid-area: survey;
+    border-left: 1px solid var(--border);
+  }
+}
+
+@media print {
+  body.printing-cards .milsans-due-row {
+    grid-template-areas:
+      "facility days"
+      "facility status"
+      "facility grade"
+      "last inspector"
+      "scheduled followup";
+  }
+
+  body.printing-cards .milsans-due-row > td:nth-child(1) { grid-area: facility; }
+  body.printing-cards .milsans-due-row > td:nth-child(2) { grid-area: days; }
+  body.printing-cards .milsans-due-row > td:nth-child(3) { grid-area: status; }
+  body.printing-cards .milsans-due-row > td:nth-child(4) { grid-area: grade; }
+  body.printing-cards .milsans-due-row > td:nth-child(5) { grid-area: last; }
+  body.printing-cards .milsans-due-row > td:nth-child(6) {
+    grid-area: inspector;
+    border-left: 1px solid #d7ded8;
+  }
+  body.printing-cards .milsans-due-row > td:nth-child(7) { grid-area: scheduled; }
+  body.printing-cards .milsans-due-row > td:nth-child(8) {
+    grid-area: followup;
+    border-left: 1px solid #d7ded8;
+  }
+
+  body.printing-cards .milsans-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "inspector creator"
+      "days status"
+      "scheduled scheduled"
+      "date date"
+      "critical noncritical"
+      "cos ihh"
+      "followup survey";
+  }
+
+  body.printing-cards .milsans-row > td:nth-child(1) { grid-area: facility; }
+  body.printing-cards .milsans-row > td:nth-child(2) { grid-area: date; }
+  body.printing-cards .milsans-row > td:nth-child(3) { grid-area: inspector; }
+  body.printing-cards .milsans-row > td:nth-child(4) {
+    grid-area: creator;
+    border-left: 1px solid #d7ded8;
+  }
+  body.printing-cards .milsans-row > td:nth-child(5) { grid-area: rating; }
+  body.printing-cards .milsans-row > td:nth-child(6) { grid-area: grade; }
+  body.printing-cards .milsans-row > td:nth-child(7) { grid-area: days; }
+  body.printing-cards .milsans-row > td:nth-child(8) {
+    grid-area: status;
+    border-left: 1px solid #d7ded8;
+  }
+  body.printing-cards .milsans-row > td:nth-child(9) { grid-area: scheduled; }
+  body.printing-cards .milsans-row > td:nth-child(10) { grid-area: critical; }
+  body.printing-cards .milsans-row > td:nth-child(11) {
+    grid-area: noncritical;
+    border-left: 1px solid #d7ded8;
+  }
+  body.printing-cards .milsans-row > td:nth-child(12) { grid-area: cos; }
+  body.printing-cards .milsans-row > td:nth-child(13) {
+    grid-area: ihh;
+    border-left: 1px solid #d7ded8;
+  }
+  body.printing-cards .milsans-row > td:nth-child(14) { grid-area: followup; }
+  body.printing-cards .milsans-row > td:nth-child(15) {
+    grid-area: survey;
+    border-left: 1px solid #d7ded8;
+  }
+}
+
+
+.missed-month-cell .badge { white-space: nowrap; }
+
+@media (max-width: 760px) {
+  .milsans-due-table .milsans-due-row {
+    grid-template-areas:
+      "facility days"
+      "facility status"
+      "facility grade"
+      "last inspector"
+      "scheduled missed"
+      "followup followup";
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(1) { grid-area: facility; }
+  .milsans-due-table .milsans-due-row > td:nth-child(2) { grid-area: days; }
+  .milsans-due-table .milsans-due-row > td:nth-child(3) { grid-area: status; }
+  .milsans-due-table .milsans-due-row > td:nth-child(4) { grid-area: grade; }
+  .milsans-due-table .milsans-due-row > td:nth-child(5) { grid-area: last; }
+  .milsans-due-table .milsans-due-row > td:nth-child(6) { grid-area: inspector; border-left: 1px solid var(--border); }
+  .milsans-due-table .milsans-due-row > td:nth-child(7) { grid-area: scheduled; }
+  .milsans-due-table .milsans-due-row > td:nth-child(8) { grid-area: missed; border-left: 1px solid var(--border); }
+  .milsans-due-table .milsans-due-row > td:nth-child(9) { grid-area: followup; }
+
+  .milsans-table .milsans-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "inspector creator"
+      "days status"
+      "scheduled missed"
+      "date date"
+      "critical noncritical"
+      "cos ihh"
+      "followup survey";
+  }
+  .milsans-table .milsans-row > td:nth-child(1) { grid-area: facility; }
+  .milsans-table .milsans-row > td:nth-child(2) { grid-area: date; }
+  .milsans-table .milsans-row > td:nth-child(3) { grid-area: inspector; }
+  .milsans-table .milsans-row > td:nth-child(4) { grid-area: creator; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(5) { grid-area: rating; }
+  .milsans-table .milsans-row > td:nth-child(6) { grid-area: grade; }
+  .milsans-table .milsans-row > td:nth-child(7) { grid-area: days; }
+  .milsans-table .milsans-row > td:nth-child(8) { grid-area: status; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(9) { grid-area: scheduled; }
+  .milsans-table .milsans-row > td:nth-child(10) { grid-area: missed; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(11) { grid-area: critical; }
+  .milsans-table .milsans-row > td:nth-child(12) { grid-area: noncritical; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(13) { grid-area: cos; }
+  .milsans-table .milsans-row > td:nth-child(14) { grid-area: ihh; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(15) { grid-area: followup; }
+  .milsans-table .milsans-row > td:nth-child(16) { grid-area: survey; border-left: 1px solid var(--border); }
+}
+
+@media print {
+  body.printing-cards .milsans-due-row {
+    grid-template-areas:
+      "facility days"
+      "facility status"
+      "facility grade"
+      "last inspector"
+      "scheduled missed"
+      "followup followup";
+  }
+  body.printing-cards .milsans-due-row > td:nth-child(1) { grid-area: facility; }
+  body.printing-cards .milsans-due-row > td:nth-child(2) { grid-area: days; }
+  body.printing-cards .milsans-due-row > td:nth-child(3) { grid-area: status; }
+  body.printing-cards .milsans-due-row > td:nth-child(4) { grid-area: grade; }
+  body.printing-cards .milsans-due-row > td:nth-child(5) { grid-area: last; }
+  body.printing-cards .milsans-due-row > td:nth-child(6) { grid-area: inspector; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-due-row > td:nth-child(7) { grid-area: scheduled; }
+  body.printing-cards .milsans-due-row > td:nth-child(8) { grid-area: missed; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-due-row > td:nth-child(9) { grid-area: followup; }
+
+  body.printing-cards .milsans-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "inspector creator"
+      "days status"
+      "scheduled missed"
+      "date date"
+      "critical noncritical"
+      "cos ihh"
+      "followup survey";
+  }
+  body.printing-cards .milsans-row > td:nth-child(1) { grid-area: facility; }
+  body.printing-cards .milsans-row > td:nth-child(2) { grid-area: date; }
+  body.printing-cards .milsans-row > td:nth-child(3) { grid-area: inspector; }
+  body.printing-cards .milsans-row > td:nth-child(4) { grid-area: creator; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-row > td:nth-child(5) { grid-area: rating; }
+  body.printing-cards .milsans-row > td:nth-child(6) { grid-area: grade; }
+  body.printing-cards .milsans-row > td:nth-child(7) { grid-area: days; }
+  body.printing-cards .milsans-row > td:nth-child(8) { grid-area: status; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-row > td:nth-child(9) { grid-area: scheduled; }
+  body.printing-cards .milsans-row > td:nth-child(10) { grid-area: missed; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-row > td:nth-child(11) { grid-area: critical; }
+  body.printing-cards .milsans-row > td:nth-child(12) { grid-area: noncritical; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-row > td:nth-child(13) { grid-area: cos; }
+  body.printing-cards .milsans-row > td:nth-child(14) { grid-area: ihh; border-left: 1px solid #d7ded8; }
+  body.printing-cards .milsans-row > td:nth-child(15) { grid-area: followup; }
+  body.printing-cards .milsans-row > td:nth-child(16) { grid-area: survey; border-left: 1px solid #d7ded8; }
+}
+
+
+/* v0.4.6: dedicated dashboards and clean MILSANS cards */
+@media (max-width: 760px) {
+  .milsans-due-table .milsans-due-row,
+  .milsans-table .milsans-row {
+    grid-template-columns: minmax(0, 1fr) minmax(112px, 0.62fr) !important;
+    grid-auto-rows: auto !important;
+    align-items: stretch !important;
+  }
+
+  .milsans-due-table .milsans-due-row {
+    grid-template-areas:
+      "facility grade"
+      "facility status"
+      "days days"
+      "last last"
+      "inspector inspector"
+      "scheduled scheduled"
+      "missed missed"
+      "followup followup" !important;
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(1) { grid-area: facility !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(2) { grid-area: days !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(3) { grid-area: status !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(4) { grid-area: grade !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(5) { grid-area: last !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(6) { grid-area: inspector !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(7) { grid-area: scheduled !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(8) { grid-area: missed !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(9) { grid-area: followup !important; }
+
+  .milsans-table .milsans-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "date date"
+      "inspector inspector"
+      "creator creator"
+      "days status"
+      "scheduled scheduled"
+      "missed missed"
+      "critical noncritical"
+      "cos ihh"
+      "followup followup"
+      "survey survey" !important;
+  }
+  .milsans-table .milsans-row > td:nth-child(1) { grid-area: facility !important; }
+  .milsans-table .milsans-row > td:nth-child(2) { grid-area: date !important; }
+  .milsans-table .milsans-row > td:nth-child(3) { grid-area: inspector !important; }
+  .milsans-table .milsans-row > td:nth-child(4) { grid-area: creator !important; }
+  .milsans-table .milsans-row > td:nth-child(5) { grid-area: rating !important; }
+  .milsans-table .milsans-row > td:nth-child(6) { grid-area: grade !important; }
+  .milsans-table .milsans-row > td:nth-child(7) { grid-area: days !important; }
+  .milsans-table .milsans-row > td:nth-child(8) { grid-area: status !important; }
+  .milsans-table .milsans-row > td:nth-child(9) { grid-area: scheduled !important; }
+  .milsans-table .milsans-row > td:nth-child(10) { grid-area: missed !important; }
+  .milsans-table .milsans-row > td:nth-child(11) { grid-area: critical !important; }
+  .milsans-table .milsans-row > td:nth-child(12) { grid-area: noncritical !important; }
+  .milsans-table .milsans-row > td:nth-child(13) { grid-area: cos !important; }
+  .milsans-table .milsans-row > td:nth-child(14) { grid-area: ihh !important; }
+  .milsans-table .milsans-row > td:nth-child(15) { grid-area: followup !important; }
+  .milsans-table .milsans-row > td:nth-child(16) { grid-area: survey !important; }
+
+  .milsans-due-row > td,
+  .milsans-row > td {
+    position: static !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    isolation: isolate;
+  }
+  .milsans-due-row > td::before,
+  .milsans-row > td::before {
+    position: static !important;
+    white-space: normal !important;
+  }
+  .milsans-due-row .badge,
+  .milsans-row .badge,
+  .milsans-row .access-stack {
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+}
+
+@media print {
+  body.printing-cards #printHeader { display: block !important; }
+
+  body.printing-cards.print-mode-fpar #fpar-dashboard,
+  body.printing-cards.print-mode-fpar #fparDashboardPanel,
+  body.printing-cards.print-mode-fpar #inspectionRequirements,
+  body.printing-cards.print-mode-fpar .inspection-table,
+  body.printing-cards.print-mode-fpar .inspection-table tbody {
+    display: block !important;
+  }
+  body.printing-cards.print-mode-fpar #milsans-dashboard,
+  body.printing-cards.print-mode-fpar #milsans,
+  body.printing-cards.print-mode-fpar #facilities,
+  body.printing-cards.print-mode-fpar #calendar,
+  body.printing-cards.print-mode-fpar #test-guide { display: none !important; }
+
+  body.printing-cards.print-mode-milsans-due #milsans-dashboard,
+  body.printing-cards.print-mode-milsans-due #milsansDashboardPanel,
+  body.printing-cards.print-mode-milsans-due #milsansDueRequirements,
+  body.printing-cards.print-mode-milsans-due .milsans-due-table,
+  body.printing-cards.print-mode-milsans-due .milsans-due-table tbody {
+    display: block !important;
+  }
+  body.printing-cards.print-mode-milsans-due #fpar-dashboard,
+  body.printing-cards.print-mode-milsans-due #milsans,
+  body.printing-cards.print-mode-milsans-due #facilities,
+  body.printing-cards.print-mode-milsans-due #calendar,
+  body.printing-cards.print-mode-milsans-due #test-guide { display: none !important; }
+
+  body.printing-cards .milsans-due-row {
+    grid-template-areas:
+      "facility grade"
+      "facility status"
+      "days days"
+      "last last"
+      "inspector inspector"
+      "scheduled scheduled"
+      "missed missed"
+      "followup followup" !important;
+  }
+  body.printing-cards .milsans-due-row > td:nth-child(1) { grid-area: facility !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(2) { grid-area: days !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(3) { grid-area: status !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(4) { grid-area: grade !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(5) { grid-area: last !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(6) { grid-area: inspector !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(7) { grid-area: scheduled !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(8) { grid-area: missed !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(9) { grid-area: followup !important; }
+
+  body.printing-cards .milsans-due-row > td {
+    position: static !important;
+    overflow: visible !important;
+  }
+}
+
+
+/* v0.4.7: unified comprehensive MILSANS cards */
+.missed-dates-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-start;
+}
+.missed-dates-list .badge { white-space: nowrap !important; }
+
+@media (max-width: 760px) {
+  .milsans-due-table .milsans-due-row,
+  .milsans-table .milsans-row {
+    grid-template-columns: minmax(0, 1fr) minmax(118px, 0.62fr) !important;
+    grid-auto-rows: auto !important;
+    align-items: stretch !important;
+  }
+
+  .milsans-due-table .milsans-due-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "lastinspector assignedteam"
+      "days status"
+      "scheduled scheduled"
+      "lastdate lastdate"
+      "missed missed"
+      "critical noncritical"
+      "cos ihh"
+      "followup followup" !important;
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(1) { grid-area: facility !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(2) { grid-area: grade !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(3) { grid-area: rating !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(4) { grid-area: lastinspector !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(5) { grid-area: assignedteam !important; border-left: 1px solid var(--border); }
+  .milsans-due-table .milsans-due-row > td:nth-child(6) { grid-area: days !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(7) { grid-area: status !important; border-left: 1px solid var(--border); }
+  .milsans-due-table .milsans-due-row > td:nth-child(8) { grid-area: scheduled !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(9) { grid-area: lastdate !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(10) { grid-area: missed !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(11) { grid-area: critical !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(12) { grid-area: noncritical !important; border-left: 1px solid var(--border); }
+  .milsans-due-table .milsans-due-row > td:nth-child(13) { grid-area: cos !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(14) { grid-area: ihh !important; border-left: 1px solid var(--border); }
+  .milsans-due-table .milsans-due-row > td:nth-child(15) { grid-area: followup !important; }
+
+  .milsans-table .milsans-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "lastinspector assignedteam"
+      "creator creator"
+      "days status"
+      "scheduled scheduled"
+      "lastdate lastdate"
+      "missed missed"
+      "critical noncritical"
+      "cos ihh"
+      "followup followup"
+      "survey survey" !important;
+  }
+  .milsans-table .milsans-row > td:nth-child(1) { grid-area: facility !important; }
+  .milsans-table .milsans-row > td:nth-child(2) { grid-area: lastdate !important; }
+  .milsans-table .milsans-row > td:nth-child(3) { grid-area: lastinspector !important; }
+  .milsans-table .milsans-row > td:nth-child(4) { grid-area: assignedteam !important; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(5) { grid-area: creator !important; }
+  .milsans-table .milsans-row > td:nth-child(6) { grid-area: rating !important; }
+  .milsans-table .milsans-row > td:nth-child(7) { grid-area: grade !important; }
+  .milsans-table .milsans-row > td:nth-child(8) { grid-area: days !important; }
+  .milsans-table .milsans-row > td:nth-child(9) { grid-area: status !important; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(10) { grid-area: scheduled !important; }
+  .milsans-table .milsans-row > td:nth-child(11) { grid-area: missed !important; }
+  .milsans-table .milsans-row > td:nth-child(12) { grid-area: critical !important; }
+  .milsans-table .milsans-row > td:nth-child(13) { grid-area: noncritical !important; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(14) { grid-area: cos !important; }
+  .milsans-table .milsans-row > td:nth-child(15) { grid-area: ihh !important; border-left: 1px solid var(--border); }
+  .milsans-table .milsans-row > td:nth-child(16) { grid-area: followup !important; }
+  .milsans-table .milsans-row > td:nth-child(17) { grid-area: survey !important; }
+
+  .milsans-due-row > td,
+  .milsans-row > td {
+    min-width: 0 !important;
+    min-height: 88px !important;
+    overflow: visible !important;
+    overflow-wrap: anywhere !important;
+  }
+  .milsans-due-row > td::before,
+  .milsans-row > td::before {
+    white-space: normal !important;
+    line-height: 1.15 !important;
+  }
+}
+
+@media print {
+  body.printing-cards .milsans-due-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "lastinspector assignedteam"
+      "days status"
+      "scheduled scheduled"
+      "lastdate lastdate"
+      "missed missed"
+      "critical noncritical"
+      "cos ihh"
+      "followup followup" !important;
+  }
+  body.printing-cards .milsans-due-row > td:nth-child(1) { grid-area: facility !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(2) { grid-area: grade !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(3) { grid-area: rating !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(4) { grid-area: lastinspector !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(5) { grid-area: assignedteam !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(6) { grid-area: days !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(7) { grid-area: status !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(8) { grid-area: scheduled !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(9) { grid-area: lastdate !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(10) { grid-area: missed !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(11) { grid-area: critical !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(12) { grid-area: noncritical !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(13) { grid-area: cos !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(14) { grid-area: ihh !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(15) { grid-area: followup !important; }
+}
+
+
+/* v0.4.8: place Assigned Team directly beside Scheduled Date */
+.scheduled-date-cell,
+.assigned-team-cell {
+  overflow-wrap: anywhere;
+}
+
+.assigned-team-cell {
+  background: #f4f7f4;
+  font-weight: 750;
+}
+
+@media (max-width: 760px) {
+  .milsans-due-table .milsans-due-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "lastinspector lastinspector"
+      "days status"
+      "scheduled assignedteam"
+      "lastdate lastdate"
+      "missed missed"
+      "critical noncritical"
+      "cos ihh"
+      "followup followup" !important;
+  }
+
+  .milsans-due-table .milsans-due-row > td:nth-child(1) { grid-area: facility !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(2) { grid-area: grade !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(3) { grid-area: rating !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(4) { grid-area: lastinspector !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(5) { grid-area: days !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(6) {
+    grid-area: status !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(7) { grid-area: scheduled !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(8) {
+    grid-area: assignedteam !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(9) { grid-area: lastdate !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(10) { grid-area: missed !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(11) { grid-area: critical !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(12) {
+    grid-area: noncritical !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(13) { grid-area: cos !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(14) {
+    grid-area: ihh !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(15) { grid-area: followup !important; }
+
+  .milsans-table .milsans-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "lastinspector lastinspector"
+      "creator creator"
+      "days status"
+      "scheduled assignedteam"
+      "lastdate lastdate"
+      "missed missed"
+      "critical noncritical"
+      "cos ihh"
+      "followup followup"
+      "survey survey" !important;
+  }
+
+  .milsans-table .milsans-row > td:nth-child(1) { grid-area: facility !important; }
+  .milsans-table .milsans-row > td:nth-child(2) { grid-area: lastdate !important; }
+  .milsans-table .milsans-row > td:nth-child(3) { grid-area: lastinspector !important; }
+  .milsans-table .milsans-row > td:nth-child(4) { grid-area: creator !important; }
+  .milsans-table .milsans-row > td:nth-child(5) { grid-area: rating !important; }
+  .milsans-table .milsans-row > td:nth-child(6) { grid-area: grade !important; }
+  .milsans-table .milsans-row > td:nth-child(7) { grid-area: days !important; }
+  .milsans-table .milsans-row > td:nth-child(8) {
+    grid-area: status !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-table .milsans-row > td:nth-child(9) { grid-area: scheduled !important; }
+  .milsans-table .milsans-row > td:nth-child(10) {
+    grid-area: assignedteam !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-table .milsans-row > td:nth-child(11) { grid-area: missed !important; }
+  .milsans-table .milsans-row > td:nth-child(12) { grid-area: critical !important; }
+  .milsans-table .milsans-row > td:nth-child(13) {
+    grid-area: noncritical !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-table .milsans-row > td:nth-child(14) { grid-area: cos !important; }
+  .milsans-table .milsans-row > td:nth-child(15) {
+    grid-area: ihh !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-table .milsans-row > td:nth-child(16) { grid-area: followup !important; }
+  .milsans-table .milsans-row > td:nth-child(17) { grid-area: survey !important; }
+}
+
+@media print {
+  body.printing-cards .milsans-due-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "lastinspector lastinspector"
+      "days status"
+      "scheduled assignedteam"
+      "lastdate lastdate"
+      "missed missed"
+      "critical noncritical"
+      "cos ihh"
+      "followup followup" !important;
+  }
+
+  body.printing-cards .milsans-due-row > td:nth-child(1) { grid-area: facility !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(2) { grid-area: grade !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(3) { grid-area: rating !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(4) { grid-area: lastinspector !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(5) { grid-area: days !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(6) { grid-area: status !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(7) { grid-area: scheduled !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(8) {
+    grid-area: assignedteam !important;
+    border-left: 1px solid #d7ded8;
+  }
+  body.printing-cards .milsans-due-row > td:nth-child(9) { grid-area: lastdate !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(10) { grid-area: missed !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(11) { grid-area: critical !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(12) { grid-area: noncritical !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(13) { grid-area: cos !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(14) { grid-area: ihh !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(15) { grid-area: followup !important; }
+}
+
+
+/* v0.4.9: streamlined MILSANS Dashboard card */
+.last-inspection-date-cell,
+.last-inspector-cell,
+.survey-id-cell {
+  overflow-wrap: anywhere;
+}
+
+.survey-id-cell {
+  background: #f7f8f7;
+  font-weight: 750;
+}
+
+@media (max-width: 760px) {
+  .milsans-due-table .milsans-due-row {
+    grid-template-columns: minmax(0, 1fr) minmax(118px, 0.62fr) !important;
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "days status"
+      "scheduled assignedteam"
+      "lastdate lastinspector"
+      "missed missed"
+      "critical noncritical"
+      "cos ihh"
+      "followup followup"
+      "survey survey" !important;
+  }
+
+  .milsans-due-table .milsans-due-row > td:nth-child(1) { grid-area: facility !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(2) { grid-area: grade !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(3) { grid-area: rating !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(4) { grid-area: days !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(5) {
+    grid-area: status !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(6) { grid-area: scheduled !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(7) {
+    grid-area: assignedteam !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(8) { grid-area: lastdate !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(9) {
+    grid-area: lastinspector !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(10) { grid-area: missed !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(11) { grid-area: critical !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(12) {
+    grid-area: noncritical !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(13) { grid-area: cos !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(14) {
+    grid-area: ihh !important;
+    border-left: 1px solid var(--border);
+  }
+  .milsans-due-table .milsans-due-row > td:nth-child(15) { grid-area: followup !important; }
+  .milsans-due-table .milsans-due-row > td:nth-child(16) { grid-area: survey !important; }
+}
+
+@media print {
+  body.printing-cards .milsans-due-row {
+    grid-template-areas:
+      "facility grade"
+      "facility rating"
+      "days status"
+      "scheduled assignedteam"
+      "lastdate lastinspector"
+      "missed missed"
+      "critical noncritical"
+      "cos ihh"
+      "followup followup"
+      "survey survey" !important;
+  }
+
+  body.printing-cards .milsans-due-row > td:nth-child(1) { grid-area: facility !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(2) { grid-area: grade !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(3) { grid-area: rating !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(4) { grid-area: days !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(5) { grid-area: status !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(6) { grid-area: scheduled !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(7) {
+    grid-area: assignedteam !important;
+    border-left: 1px solid #d7ded8;
+  }
+  body.printing-cards .milsans-due-row > td:nth-child(8) { grid-area: lastdate !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(9) {
+    grid-area: lastinspector !important;
+    border-left: 1px solid #d7ded8;
+  }
+  body.printing-cards .milsans-due-row > td:nth-child(10) { grid-area: missed !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(11) { grid-area: critical !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(12) {
+    grid-area: noncritical !important;
+    border-left: 1px solid #d7ded8;
+  }
+  body.printing-cards .milsans-due-row > td:nth-child(13) { grid-area: cos !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(14) {
+    grid-area: ihh !important;
+    border-left: 1px solid #d7ded8;
+  }
+  body.printing-cards .milsans-due-row > td:nth-child(15) { grid-area: followup !important; }
+  body.printing-cards .milsans-due-row > td:nth-child(16) { grid-area: survey !important; }
+}
+
+
+/* v0.5.0 quick top/bottom page navigation */
+.quick-scroll-controls {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 1200;
+  display: grid;
+  gap: 10px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.quick-scroll-controls.hidden {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.quick-scroll-button {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  color: #ffffff;
+  background: rgba(24, 70, 48, 0.92);
+  box-shadow: 0 8px 22px rgba(20, 48, 34, 0.28);
+  font: inherit;
+  font-size: 1.75rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.quick-scroll-button:active {
+  transform: scale(0.95);
+}
+
+.quick-scroll-button:focus-visible {
+  outline: 4px solid rgba(36, 75, 53, 0.22);
+  outline-offset: 3px;
+}
+
+.quick-scroll-button:disabled {
+  cursor: default;
+  opacity: 0.38;
+  box-shadow: none;
+}
+
+@media (max-width: 760px) {
+  body {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .quick-scroll-controls {
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+
+  .quick-scroll-button {
+    width: 50px;
+    height: 50px;
+    font-size: 1.65rem;
+  }
+}
+
+@media print {
+  .quick-scroll-controls {
+    display: none !important;
+  }
 }

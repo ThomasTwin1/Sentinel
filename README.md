@@ -216,7 +216,9 @@ Sentinel should be measured by its ability to improve outcomes such as:
 
 ## Current Status
 
-Sentinel is currently in the planning and product definition stage. This repository will initially focus on product scope, operational requirements, workflow design, data modeling, and MVP validation before application code is introduced.
+Sentinel now includes a dependency-free browser prototype for FPAR and MILSANS inspection tracking. The current v0.5.0 build supports separate dashboards, local CSV imports, due-date and missed-history calculations, inaccessible-facility tracking, printable facility cards, fictional demo fixtures, and browser-local backups.
+
+See [TRACKER_README.md](TRACKER_README.md) for feature details and test commands. Public testing must use fictional fixtures. Authorized operational-data evaluation must use a downloaded local copy and follow [LOCAL_REAL_DATA_TESTING.md](LOCAL_REAL_DATA_TESTING.md); real exports must never be uploaded or committed to this public repository.
 
 ## Project Direction
 
@@ -228,7 +230,7 @@ Near-term work should focus on:
 4. Mapping AI-assisted workflows and required human review points.
 5. Defining roles and permissions for 68R personnel, NCOICs, Veterinary Officers, Preventive Medicine, and commanders.
 6. Choosing the initial technical architecture.
-7. Building a small, testable MVP around food inspection operations, corrective action tracking, food defense risk visibility, and investigation support.
+7. Validating and hardening the current inspection-tracking prototype before adding corrective action, food defense, and investigation modules.
 
 ## License
 

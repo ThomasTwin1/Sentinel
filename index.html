@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Sentinel Tracker" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <title>Sentinel Upcoming Inspection Tracker v0.2.1</title>
+  <title>Sentinel Upcoming Inspection Tracker v0.5.0</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -22,10 +22,21 @@
     <div class="header-actions">
       <button id="loadDemoBtn" class="button secondary">Load Demo Data</button>
       <label class="button secondary file-label">
-        Import Inspection CSV
+        Import FPAR CSV
         <input id="importCsvInput" type="file" accept=".csv,text/csv" hidden />
       </label>
-      <button id="exportCsvBtn" class="button secondary">Export CSV</button>
+      <label class="button secondary file-label">
+        Import MILSANS CSV
+        <input id="importMilsansCsvTopInput" type="file" accept=".csv,text/csv" hidden />
+      </label>
+      <label class="button secondary file-label">
+        Import Inaccessible CSV
+        <input id="importInaccessibleCsvInput" type="file" accept=".csv,text/csv" hidden />
+      </label>
+      <button id="exportCsvBtn" class="button secondary">Export FPAR CSV</button>
+      <button id="exportMilsansCsvTopBtn" class="button secondary">Export MILSANS CSV</button>
+      <button id="printFparCardsBtn" class="button secondary">Print FPAR Cards</button>
+      <button id="printMilsansCardsBtn" class="button secondary">Print MILSANS Cards</button>
       <button id="exportJsonBtn" class="button secondary">Backup JSON</button>
       <label class="button secondary file-label">
         Restore JSON
@@ -35,18 +46,24 @@
   </header>
 
   <div class="security-banner">
-    <strong>Portfolio prototype:</strong> Data stays in this browser. Use fictional or sanitized records only. Do not enter CUI, PII, credentials, or real operational data.
+    <strong>Public hosted copy:</strong> Use fictional or sanitized records only. Authorized real-data testing must use a downloaded local copy on an approved device; never commit or upload operational exports to GitHub.
   </div>
 
   <nav class="tabs" aria-label="Tracker sections">
-    <button class="tab active" data-tab="dashboard">Dashboard</button>
-    <button class="tab" data-tab="facilities">Facilities</button>
+    <button class="tab active" data-tab="fpar-dashboard">FPAR Dashboard</button>
+    <button class="tab" data-tab="milsans-dashboard">MILSANS Dashboard</button>
     <button class="tab" data-tab="calendar">Business Calendar</button>
     <button class="tab" data-tab="test-guide">Test Guide</button>
   </nav>
 
   <main>
-    <section id="dashboard" class="tab-panel active">
+    <section id="printHeader" class="print-only" aria-hidden="true">
+      <h1 id="printTitle">Sentinel Facility Cards</h1>
+      <p id="printSummary"></p>
+      <p class="print-warning">Prototype output - verify against the source system before action.</p>
+    </section>
+
+    <section id="fpar-dashboard" class="tab-panel active">
       <div class="toolbar">
         <div class="as-of-control">
           <label for="asOfDate">Calculate status as of</label>
@@ -59,6 +76,8 @@
         </div>
       </div>
 
+      <div id="fparDashboardPanel" class="dashboard-source-panel">
+      <div class="source-section-heading"><p class="eyebrow">FPAR</p><h2>Food Protection Activity Requirements</h2></div>
       <div id="summaryCards" class="summary-grid"></div>
 
       <section class="status-key" aria-labelledby="statusKeyTitle">
@@ -66,11 +85,32 @@
           <h2 id="statusKeyTitle">Due Status Key</h2>
           <p>Days to Due uses one signed number: negative means overdue, 0 means due today, and positive means days remaining.</p>
         </div>
-        <div class="status-key-grid">
-          <div class="status-key-item overdue"><strong>Overdue</strong><span>Below 0 — due date has passed.</span></div>
-          <div class="status-key-item today"><strong>Due Today</strong><span>0 — complete or confirm today.</span></div>
-          <div class="status-key-item soon"><strong>Due Soon</strong><span>Weekly 1–2, Monthly 1–7, Quarterly 1–14 days.</span></div>
-          <div class="status-key-item upcoming"><strong>Upcoming</strong><span>Outside the warning window.</span></div>
+        <div id="statusKeyGrid" class="status-key-grid">
+          <button type="button" class="status-key-item overdue" data-status-value="OVERDUE" aria-pressed="false">
+            <strong>Overdue</strong>
+            <span>Below 0 — due date has passed.</span>
+            <span class="key-action">View facilities</span>
+          </button>
+          <button type="button" class="status-key-item today" data-status-value="DUE_TODAY" aria-pressed="false">
+            <strong>Due Today</strong>
+            <span>0 — complete or confirm today.</span>
+            <span class="key-action">View facilities</span>
+          </button>
+          <button type="button" class="status-key-item soon" data-status-value="DUE_SOON" aria-pressed="false">
+            <strong>Due Soon</strong>
+            <span>Weekly 1–2, Monthly 1–7, Quarterly 1–14 days.</span>
+            <span class="key-action">View facilities</span>
+          </button>
+          <button type="button" class="status-key-item upcoming" data-status-value="UPCOMING" aria-pressed="false">
+            <strong>Upcoming</strong>
+            <span>Outside the warning window.</span>
+            <span class="key-action">View facilities</span>
+          </button>
+          <button type="button" class="status-key-item access" data-access-value="INACCESSIBLE" aria-pressed="false">
+            <strong>Inaccessible</strong>
+            <span>An access flag shown in addition to the red, yellow, orange, or green due status.</span>
+            <span class="key-action">View facilities</span>
+          </button>
         </div>
       </section>
 
@@ -85,17 +125,25 @@
         </div>
         <div>
           <label for="inspectorFilter">Inspector</label>
-          <select id="inspectorFilter"><option value="">All inspectors</option></select>
+          <select id="inspectorFilter"><option value="">All last inspectors</option></select>
         </div>
         <div>
           <label for="statusFilter">Status</label>
           <select id="statusFilter">
             <option value="">All statuses</option>
-            <option value="OVERDUE">Overdue</option>
+            <option value="OVERDUE">Missed</option>
             <option value="DUE_TODAY">Due Today</option>
-            <option value="DUE_SOON">Due Soon</option>
+            <option value="DUE_SOON">Coming Soon</option>
             <option value="UPCOMING">Upcoming</option>
             <option value="NO_HISTORY">No Inspection History</option>
+          </select>
+        </div>
+        <div>
+          <label for="accessFilter">Accessibility</label>
+          <select id="accessFilter">
+            <option value="">All facilities</option>
+            <option value="INACCESSIBLE">Inaccessible only</option>
+            <option value="ACCESSIBLE">Accessible only</option>
           </select>
         </div>
         <div>
@@ -108,7 +156,7 @@
         </div>
       </div>
 
-      <div class="table-card">
+      <div id="inspectionRequirements" class="table-card" tabindex="-1">
         <div class="table-heading">
           <div>
             <h2>Inspection Requirements</h2>
@@ -117,23 +165,162 @@
           <span id="recordCount" class="record-count"></span>
         </div>
         <div class="table-wrap">
-          <table>
+          <table class="inspection-table">
             <thead>
               <tr>
                 <th>Facility</th>
+                <th>Days to Due</th>
+                <th>Status</th>
+                <th>Access</th>
+                <th>Last Inspection Date</th>
+                <th>Due Date</th>
                 <th>Installation</th>
                 <th>Agency</th>
                 <th>Inspector</th>
                 <th>Frequency</th>
-                <th>Last Inspected</th>
-                <th>Due Date</th>
-                <th>Days to Due</th>
-                <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody id="trackerTableBody"></tbody>
           </table>
+        </div>
+
+      </div>
+      </div>
+    </section>
+
+    <section id="milsans-dashboard" class="tab-panel">
+      <div class="toolbar">
+        <div class="as-of-control">
+          <label for="milsansAsOfDate">Calculate MILSANS status as of</label>
+          <input id="milsansAsOfDate" type="date" />
+          <button id="milsansTodayBtn" class="button small secondary">Use Today</button>
+        </div>
+        <div class="search-control">
+          <label for="milsansDueSearch">Search MILSANS</label>
+          <input id="milsansDueSearch" type="search" placeholder="Facility, building number, or inspector" />
+        </div>
+      </div>
+
+      <div id="milsansDashboardPanel" class="dashboard-source-panel">
+        <div class="source-section-heading">
+          <div>
+            <p class="eyebrow">MILSANS</p>
+            <h2>Military Sanitation Requirements</h2>
+            <p class="muted">MILSANS inspections are due by the 25th of their required month. Missed Inspection Dates lists every outstanding monthly or quarterly requirement until a new completed inspection resets the cycle.</p>
+          </div>
+        </div>
+
+        <div id="milsansDueSummaryCards" class="summary-grid"></div>
+
+      <section class="status-key milsans-key" aria-labelledby="milsansKeyTitle">
+        <div class="status-key-heading">
+          <h2 id="milsansKeyTitle">Inspection Rating Key</h2>
+          <p>The cards summarize the latest completed rating for each facility. Follow-up Required is tracked separately from the rating.</p>
+        </div>
+        <div id="milsansRatingKey" class="milsans-rating-key">
+          <button type="button" class="milsans-key-item fully" data-milsans-rating="Fully Compliant" aria-pressed="false">
+            <strong>A — Fully Compliant</strong>
+            <span>No violations, or four or fewer noncritical violations corrected onsite.</span>
+            <span class="key-action">View facilities</span>
+          </button>
+          <button type="button" class="milsans-key-item substantially" data-milsans-rating="Substantially Compliant" aria-pressed="false">
+            <strong>B — Substantially Compliant</strong>
+            <span>No IHH; two or fewer critical violations corrected onsite and/or five or fewer noncritical violations.</span>
+            <span class="key-action">View facilities</span>
+          </button>
+          <button type="button" class="milsans-key-item partially" data-milsans-rating="Partially Compliant" aria-pressed="false">
+            <strong>C — Partially Compliant</strong>
+            <span>No IHH; three or more critical violations corrected onsite and/or six or more noncritical violations.</span>
+            <span class="key-action">View facilities</span>
+          </button>
+          <button type="button" class="milsans-key-item noncompliant" data-milsans-rating="Non-Compliant" aria-pressed="false">
+            <strong>F — Noncompliant</strong>
+            <span>An IHH is present or any critical violation is not corrected onsite.</span>
+            <span class="key-action">View facilities</span>
+          </button>
+        </div>
+      </section>
+
+        <div class="filter-grid milsans-due-filter-grid">
+          <div>
+            <label for="milsansDueRatingFilter">Inspection rating</label>
+            <select id="milsansDueRatingFilter">
+              <option value="">All ratings</option>
+              <option value="Fully Compliant">A — Fully Compliant</option>
+              <option value="Substantially Compliant">B — Substantially Compliant</option>
+              <option value="Partially Compliant">C — Partially Compliant</option>
+              <option value="Non-Compliant">F — Noncompliant</option>
+            </select>
+          </div>
+          <div>
+            <label for="milsansDueStatusFilter">MILSANS due status</label>
+            <select id="milsansDueStatusFilter">
+              <option value="">All due statuses</option>
+              <option value="OVERDUE">Missed</option>
+              <option value="DUE_TODAY">Due Today</option>
+              <option value="DUE_SOON">Coming Soon</option>
+              <option value="UPCOMING">Upcoming</option>
+              <option value="NO_DUE_DATE">No Due Date</option>
+            </select>
+          </div>
+          <div>
+            <label for="milsansDueMonthFilter">Coming due month</label>
+            <select id="milsansDueMonthFilter">
+              <option value="">All scheduled months</option>
+            </select>
+          </div>
+          <div>
+            <label for="milsansDueInspectorFilter">Last inspector</label>
+            <select id="milsansDueInspectorFilter">
+              <option value="">All last inspectors</option>
+            </select>
+          </div>
+          <div>
+            <label for="milsansDueSortMode">Arrange MILSANS by</label>
+            <select id="milsansDueSortMode">
+              <option value="URGENCY">Missed first — most overdue first</option>
+              <option value="COMING_DUE">Coming up due — soonest interval first</option>
+              <option value="SCHEDULED_MONTH">Scheduled month — earliest first</option>
+              <option value="FACILITY">Facility name — A to Z</option>
+              <option value="GRADE">Letter grade — F to A</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="milsansDueRequirements" class="table-card" tabindex="-1">
+          <div class="table-heading">
+            <div>
+              <h2>MILSANS Due Requirements</h2>
+              <p id="milsansDueDescription">Sorted by urgency, with required follow-ups and overdue inspections first.</p>
+            </div>
+            <span id="milsansDueRecordCount" class="record-count"></span>
+          </div>
+          <div class="table-wrap">
+            <table class="milsans-due-table">
+              <thead>
+                <tr>
+                  <th>Facility</th>
+                  <th>Grade</th>
+                  <th>Rating</th>
+                  <th>Days to Due</th>
+                  <th>Due Status</th>
+                  <th>Scheduled Date</th>
+                  <th>Assigned Team</th>
+                  <th>Last Inspection Date</th>
+                  <th>Last Inspector</th>
+                  <th>Missed Inspection Dates</th>
+                  <th>Critical</th>
+                  <th>Non-Critical</th>
+                  <th>COS</th>
+                  <th>IHH</th>
+                  <th>Follow-Up Required</th>
+                  <th>Survey ID</th>
+                </tr>
+              </thead>
+              <tbody id="milsansDueTableBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -200,6 +387,19 @@
                 <input id="active" type="checkbox" checked />
                 <label for="active">Active facility</label>
               </div>
+              <div class="checkbox-row">
+                <input id="inaccessible" type="checkbox" />
+                <label for="inaccessible">Currently inaccessible</label>
+              </div>
+              <div>
+                <label for="inaccessibilityReason">Inaccessibility reason</label>
+                <input id="inaccessibilityReason" maxlength="120" placeholder="Temporary renovations, out of season, etc." />
+                <p class="field-help">This flag does not change the facility's due status.</p>
+              </div>
+              <div>
+                <label for="inaccessibilityDate">Inaccessibility date</label>
+                <input id="inaccessibilityDate" type="date" />
+              </div>
             </div>
             <div id="duplicateWarning" class="warning-box hidden"></div>
             <button class="button primary" type="submit">Save Facility</button>
@@ -223,6 +423,7 @@
                   <th>Agency</th>
                   <th>Frequency</th>
                   <th>Status</th>
+                  <th>Access</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -282,6 +483,131 @@
       </div>
     </section>
 
+
+    <section id="milsans" class="tab-panel">
+      <div class="section-heading milsans-heading">
+        <div>
+          <p class="eyebrow">MILITARY SANITATION INSPECTIONS</p>
+          <h2>MILSANS Inspection Results</h2>
+          <p class="muted">Shows the latest completed inspection rating and its Tri-Service Food Code letter-grade equivalent for each facility. In-progress surveys do not replace a completed rating.</p>
+        </div>
+        <div class="header-actions">
+          <button id="loadMilsansDemoBtn" class="button secondary">Load MILSANS Demo</button>
+          <label class="button secondary file-label">
+            Import MILSANS CSV
+            <input id="importMilsansCsvInput" type="file" accept=".csv,text/csv" hidden />
+          </label>
+          <button id="exportMilsansCsvBtn" class="button secondary">Export MILSANS CSV</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-control">
+          <label for="milsansSearch">Search MILSANS records</label>
+          <input id="milsansSearch" type="search" placeholder="Facility, inspector, installation, or survey ID" />
+        </div>
+      </div>
+
+      <div class="milsans-policy-note">
+        <strong>Prototype grade equivalent:</strong>
+        Sentinel displays the Table 8-4 letter-grade equivalent together with the official compliance rating.
+        Official use of a letter-grading system requires a formal policy from the regulatory authority.
+      </div>
+
+      <div id="milsansSummaryCards" class="summary-grid milsans-summary-grid"></div>
+
+
+      <div class="filter-grid milsans-filter-grid">
+        <div>
+          <label for="milsansRatingFilter">Rating</label>
+          <select id="milsansRatingFilter">
+            <option value="">All ratings</option>
+            <option value="Fully Compliant">Fully Compliant</option>
+            <option value="Substantially Compliant">Substantially Compliant</option>
+            <option value="Partially Compliant">Partially Compliant</option>
+            <option value="Non-Compliant">Non-Compliant</option>
+          </select>
+        </div>
+        <div>
+          <label for="milsansFollowUpFilter">Follow-up</label>
+          <select id="milsansFollowUpFilter">
+            <option value="">All records</option>
+            <option value="YES">Follow-up required</option>
+            <option value="NO">No follow-up required</option>
+          </select>
+        </div>
+        <div>
+          <label for="milsansDueStatusResultsFilter">Action status</label>
+          <select id="milsansDueStatusResultsFilter">
+            <option value="">All action statuses</option>
+            <option value="OVERDUE">Missed</option>
+            <option value="DUE_TODAY">Due Today</option>
+            <option value="DUE_SOON">Coming Soon</option>
+            <option value="UPCOMING">Upcoming</option>
+          </select>
+        </div>
+        <div>
+          <label for="milsansMonthFilter">Coming due month</label>
+          <select id="milsansMonthFilter">
+            <option value="">All scheduled months</option>
+          </select>
+        </div>
+        <div>
+          <label for="milsansInspectorFilter">Last inspector</label>
+          <select id="milsansInspectorFilter">
+            <option value="">All last inspectors</option>
+          </select>
+        </div>
+        <div>
+          <label for="milsansSortMode">Arrange results by</label>
+          <select id="milsansSortMode">
+            <option value="DUE_DATE">Required interval — soonest first</option>
+            <option value="COMING_DUE">Coming up due — future intervals first</option>
+            <option value="SEVERITY">Rating severity</option>
+            <option value="DATE">Inspection date — newest first</option>
+            <option value="SCHEDULED_MONTH">Scheduled month — earliest first</option>
+            <option value="FACILITY">Facility name — A to Z</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="milsansResults" class="table-card" tabindex="-1">
+        <div class="table-heading">
+          <div>
+            <h2>Latest MILSANS Ratings</h2>
+            <p id="milsansDescription">Latest completed inspection per facility, arranged by rating severity.</p>
+          </div>
+          <span id="milsansRecordCount" class="record-count"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="milsans-table">
+            <thead>
+              <tr>
+                <th>Facility</th>
+                <th>Last Inspection Date</th>
+                <th>Last Inspector</th>
+                <th>DOEHRS Record Created By</th>
+                <th>Rating</th>
+                <th>TSFC Grade</th>
+                <th>Days to Due</th>
+                <th>Due Status</th>
+                <th>Scheduled Date</th>
+                <th>Assigned Team</th>
+                <th>Missed Inspection Dates</th>
+                <th>Critical</th>
+                <th>Non-Critical</th>
+                <th>COS</th>
+                <th>IHH</th>
+                <th>Follow-Up Required</th>
+                <th>Survey ID</th>
+              </tr>
+            </thead>
+            <tbody id="milsansTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section id="test-guide" class="tab-panel">
       <div class="guide-card">
         <p class="eyebrow">USER ACCEPTANCE TESTING</p>
@@ -297,6 +623,17 @@
           <li><strong>Sorting:</strong> Confirm Urgency places the most overdue first and Building Number places the lowest building first.</li>
           <li><strong>Duplicate warning:</strong> Add two facilities with the same name on the same installation and confirm a warning appears.</li>
           <li><strong>Inactive facility:</strong> Mark a facility inactive and confirm it disappears from the dashboard.</li>
+          <li><strong>MILSANS CSV:</strong> Import fictional inspection-result history and confirm the cards use the latest completed inspection for each facility.</li>
+          <li><strong>MILSANS interaction:</strong> Tap the due-status cards or Inspection Rating Key and confirm the MILSANS Dashboard filters and scrolls to the first matching facility.</li>
+          <li><strong>MILSANS inspector:</strong> Filter by inspector and confirm the inspector shown comes from the DOEHRS Surveyor field. When that field is blank, confirm Sentinel says it was not listed instead of assuming the DOEHRS record creator performed the inspection.</li>
+          <li><strong>MILSANS interval status:</strong> Confirm a monthly record becomes Missed after one calendar month and a quarterly record becomes Missed after three calendar months unless a required follow-up date applies.</li>
+          <li><strong>MILSANS month filter:</strong> Select a scheduled month and confirm only facilities assigned to that month remain visible.</li>
+          <li><strong>Missed inspection history:</strong> Use a quarterly facility last completed in February and an as-of date after August 25. Confirm both May 25 and August 25 appear until a newer completed inspection is imported.</li>
+          <li><strong>Assigned team:</strong> Confirm the locally assigned team or lead appears next to the last inspector on each MILSANS card.</li>
+          <li><strong>Printing:</strong> Open each dashboard separately. Tap Print FPAR Cards or Print MILSANS Cards and confirm the iPhone print sheet opens with clean facility cards.</li>
+          <li><strong>Scheduled Date:</strong> Confirm a required follow-up date takes priority; otherwise Scheduled Date is the 25th of the scheduled month.</li>
+          <li><strong>Missed Month:</strong> Confirm missed facilities display the exact 25th of the month in which the required monthly or quarterly inspection was due.</li>
+          <li><strong>TSFC letter grades:</strong> Confirm Fully=A, Substantially=B, Partially=C, and Noncompliant=F. Confirm no D grade appears.</li>
           <li><strong>Backup and restore:</strong> Export JSON, delete or change a record, then restore the file.</li>
         </ol>
         <div class="callout">
@@ -338,5 +675,27 @@
       });
     }
   </script>
+
+  <nav id="quickScrollControls" class="quick-scroll-controls" aria-label="Quick page navigation">
+    <button
+      id="scrollToTopBtn"
+      class="quick-scroll-button"
+      type="button"
+      aria-label="Scroll to the top of the page"
+      title="Back to top"
+    >
+      <span aria-hidden="true">↑</span>
+    </button>
+    <button
+      id="scrollToBottomBtn"
+      class="quick-scroll-button"
+      type="button"
+      aria-label="Scroll to the bottom of the page"
+      title="Go to bottom"
+    >
+      <span aria-hidden="true">↓</span>
+    </button>
+  </nav>
+
 </body>
 </html>

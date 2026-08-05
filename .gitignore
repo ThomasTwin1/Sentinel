@@ -1,0 +1,23 @@
+# Local operating data must never be committed to this public repository.
+*.csv
+*.json
+*.xlsx
+*.xls
+*.pdf
+
+# Only explicitly fictional CSV fixtures are allowed.
+!Sentinel_Fictional_*.csv
+!VSIMS/Fake FPARS/Sentinel_Fictional_*.csv
+
+# Known local export/reference locations.
+Milsans/
+PDF/
+Regs/
+VSIMS/FPARS/
+__MACOSX/
+.DS_Store
+
+# Sentinel browser backups and exports.
+sentinel-tracker-backup-*
+sentinel-inspection-readiness-*
+sentinel-milsans-*

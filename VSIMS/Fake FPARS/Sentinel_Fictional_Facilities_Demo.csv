@@ -1,0 +1,36 @@
+Installation,Agency,Facility,Date,Workflow Status,"Expected Sentinel Status (As of Jul 30, 2026)"
+Example Installation North,Army Troop Feeding,Valor Dining Facility Bldg 110,"Jul 11, 2026",Accepted,HISTORICAL
+Example Installation South,Army Troop Feeding,Pioneer DFAC Bldg 115,"Jul 16, 2026",Submitted,HISTORICAL
+Example Installation South,Defense Commissary Agency,Evergreen Commissary Bldg 300,"Jun 5, 2026",Accepted,HISTORICAL
+Example Installation North,Army Air Force Exchange Service,Mobile BBQ Truck Bldg 903,"Jan 30, 2026",Accepted,HISTORICAL
+Example Installation Central,Department of Defense Dependent Schools,Discovery Elementary Cafeteria Bldg 410,"Jun 12, 2026",Draft,HISTORICAL
+Example Installation North,Army Troop Feeding,Valor Dining Facility Bldg 110,"Jul 18, 2026",Accepted,OVERDUE
+Example Installation Central,Army Troop Feeding,Summit Dining Facility Bldg 112,"Jul 20, 2026",Submitted,OVERDUE
+Example Installation South,Army Troop Feeding,Pioneer DFAC Bldg 115,"Jul 23, 2026",Accepted,DUE TODAY
+Example Installation North,Army Troop Feeding,Horizon Dining Facility Bldg 118,"Jul 24, 2026",Draft,DUE SOON
+Example Installation Central,Hospital Commander,Harbor Hospital Dining Facility Bldg 510,"Jul 25, 2026",Accepted,DUE SOON
+Example Installation South,Hospital Commander,Cedar Medical Dining Facility Bldg 515,"Jul 27, 2026",Submitted,UPCOMING
+Example Installation North,Army Troop Feeding,Pathfinder Dining Facility Bldg 120,"Jul 28, 2026",Accepted,UPCOMING
+Example Installation North,Army Air Force Exchange Service,Orion Exchange Food Court Bldg 210,"Jun 15, 2026",Accepted,OVERDUE
+Example Installation Central,Army Air Force Exchange Service,Compass Coffee Kiosk Bldg 212,"Jun 24, 2026",Submitted,OVERDUE
+Example Installation South,Army Air Force Exchange Service,Victory Pizza Counter Bldg 214,"Jun 29, 2026",Draft,OVERDUE
+Example Installation North,Morale Welfare & Recreation,Trailhead Snack Bar Bldg 216,"Jun 30, 2026",Accepted,DUE TODAY
+Example Installation Central,Morale Welfare & Recreation,Galaxy Bowling Center Grill Bldg 218,"Jul 1, 2026",Submitted,DUE SOON
+Example Installation South,Defense Commissary Agency,Evergreen Commissary Bldg 300,"Jul 5, 2026",Accepted,DUE SOON
+Example Installation North,Defense Commissary Agency,Northstar Commissary Bldg 305,"Jul 10, 2026",Accepted,UPCOMING
+Example Installation Central,Department of Defense Dependent Schools,Discovery Elementary Cafeteria Bldg 410,"Jul 12, 2026",Submitted,UPCOMING
+Example Installation South,Department of Defense Dependent Schools,Summit Middle School Cafeteria Bldg 420,"Jul 15, 2026",Accepted,UPCOMING
+Example Installation North,Morale Welfare & Recreation,Pathfinder Child Development Center Kitchen Bldg 430,"Jul 20, 2026",Draft,UPCOMING
+Example Installation Central,Morale Welfare & Recreation,Aurora Youth Center Snack Bar Bldg 440,"Jul 24, 2026",Accepted,UPCOMING
+Example Installation South,Morale Welfare & Recreation,Lakeside Community Club Kitchen Bldg 450,"Jul 25, 2026",Submitted,UPCOMING
+Example Installation North,Morale Welfare & Recreation,Falcon Fitness Center Smoothie Bar Bldg 460,"Jul 27, 2026",Accepted,UPCOMING
+Example Installation Central,Army Air Force Exchange Service,Mobile Taco Truck Bldg 901,"Apr 15, 2026",Accepted,OVERDUE
+Example Installation South,Army Air Force Exchange Service,Mobile Coffee Truck Bldg 902,"Apr 25, 2026",Submitted,OVERDUE
+Example Installation North,Army Air Force Exchange Service,Mobile BBQ Truck Bldg 903,"Apr 30, 2026",Accepted,DUE TODAY
+Example Installation Central,Army Air Force Exchange Service,Mobile Smoothie Truck Bldg 904,"May 1, 2026",Draft,DUE SOON
+Example Installation South,Army Air Force Exchange Service,Mobile Noodle Truck Bldg 905,"May 10, 2026",Accepted,DUE SOON
+Example Installation North,Army Air Force Exchange Service,Mobile Sandwich Truck Bldg 906,"May 20, 2026",Submitted,UPCOMING
+Example Installation Central,Army Air Force Exchange Service,Mobile Dessert Truck Bldg 907,"Jun 1, 2026",Accepted,UPCOMING
+Example Installation South,Army Air Force Exchange Service,Mobile Breakfast Truck Bldg 908,"Jun 15, 2026",Draft,UPCOMING
+Example Installation North,Army Air Force Exchange Service,Mobile Pizza Truck Bldg 909,"Jul 1, 2026",Accepted,UPCOMING
+Example Installation Central,Army Air Force Exchange Service,Mobile Juice Truck Bldg 910,"Jul 10, 2026",Submitted,UPCOMING

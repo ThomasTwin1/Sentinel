@@ -110,7 +110,7 @@ assert.equal(
   "2026-07-29",
   "Latest inspection date should be used regardless of workflow status"
 );
-assert.equal(inferImportFrequency("Army Troop Feeding", "Provider Grill DFAC"), "WEEKLY");
+assert.equal(inferImportFrequency("Army Troop Feeding", "Example Dining Facility"), "WEEKLY");
 assert.equal(inferImportFrequency("Army Air Force Exchange Service", "Example Mobile Food Truck"), "QUARTERLY");
 assert.equal(inferImportFrequency("Army Air Force Exchange Service", "Example Food Court"), "MONTHLY");
 assert.equal(toISO(addCalendarMonths(parseISO("2026-03-10"), 6)), "2026-09-10", "Biannual should add 6 calendar months");
