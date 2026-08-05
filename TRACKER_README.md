@@ -1,8 +1,8 @@
-# Sentinel Facility Due-Date Tracker v0.2.1
+# Sentinel Facility Due-Date Tracker v0.5.0
 
 A dependency-free browser prototype for validating Sentinel's first MVP feature: showing which food facilities are overdue, due today, due soon, or upcoming.
 
-## Working criteria in v0.2
+## Working criteria in v0.5.0
 
 - **Last Inspected** uses the latest inspection date listed for each facility.
 - Workflow status does not affect the countdown; Draft, Submitted, and Accepted rows are treated the same for date selection.
@@ -22,6 +22,9 @@ A dependency-free browser prototype for validating Sentinel's first MVP feature:
   - Building number — lowest first
   - Facility name — A to Z
 - Saved Facilities are arranged by building number.
+- On iPhone portrait screens, each facility is displayed as a mobile card with **Days to Due**, **Status**, **Last Inspected**, and **Due Date** placed beside the facility first.
+- Dashboard summary cards are clickable. Tapping **Active**, **Overdue**, **Due Today**, **Due Soon**, or **Upcoming** filters the inspection table and automatically positions the first matching facility at the top of the screen. Tapping the selected status again clears that filter.
+- **Print Facility Cards** prints the currently filtered inspection cards as a clean two-column Letter-size handout. On iPhone, open the print preview, expand the preview with two fingers, and save or share the resulting PDF.
 
 ## CSV import
 
@@ -45,11 +48,13 @@ This repository is public and the GitHub Pages application is not an approved Ar
 
 Do not upload real facility schedules, CUI, PII, names, credentials, or operational data to the repository. Use the included fictional CSV for public testing. Operational exports should remain local and should only be used in an authorized environment.
 
+For authorized real-data evaluation, download Sentinel and follow [LOCAL_REAL_DATA_TESTING.md](LOCAL_REAL_DATA_TESTING.md). Do not import real operational data into the public GitHub Pages copy.
+
 ## Run locally
 
 1. Download or clone the repository.
 2. Open `index.html` in Microsoft Edge, Chrome, or Firefox.
-3. Load fictional demo data or import `sentinel-sanitized-import-demo.csv`.
+3. Load fictional demo data or import one of the included `Sentinel_Fictional_*.csv` fixtures.
 4. Confirm due dates, signed Days to Due, colors, sorting, and filters.
 
 ## Test
@@ -64,4 +69,205 @@ The tests cover monthly month-end behavior, weekly and quarterly calculations, s
 
 ## Architecture
 
-This v0.2 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. Data remains in browser local storage. Shared team access still requires a secure backend, authentication, permissions, and an approved hosting environment.
+This v0.5.0 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. Data remains in browser local storage. Shared team access still requires a secure backend, authentication, permissions, and an approved hosting environment.
+
+- v0.2.7 fixes the iPhone **Print Facility Cards** button so it correctly opens Safari's print sheet from the local Sentinel build.
+
+## Inaccessible Facility Tracking
+
+- Import the normal inspection CSV first.
+- Use **Import Inaccessible CSV** for an export containing Installation, Agency, Facility, Inaccessibility reason, and Inaccessibility Date.
+- Sentinel matches each inaccessible record to an existing facility.
+- The facility keeps its regular Overdue, Due Today, Due Soon, or Upcoming status.
+- A separate **Inaccessible** badge, reason, and date are shown on the dashboard, printed facility cards, saved facility list, and exported CSV.
+- Use the Accessibility filter to show only inaccessible or accessible facilities.
+- Re-importing the inspection CSV preserves accessibility information when the facility and installation names still match.
+
+## Interactive Dashboard and Due Status Key
+
+- The dashboard now includes a sixth purple **Inaccessible** card with the number of active facilities currently marked inaccessible.
+- Tapping **Active**, **Overdue**, **Due Today**, **Due Soon**, **Upcoming**, or **Inaccessible** filters the records and scrolls the first matching facility to the top of the screen.
+- Every item in the **Due Status Key** is now interactive and performs the same filter-and-scroll action.
+- Selecting a due-status shortcut clears the accessibility filter; selecting **Inaccessible** clears the due-status filter so all inaccessible facilities appear regardless of red, orange, yellow, or green status.
+- Tapping the currently selected shortcut again clears that shortcut.
+
+
+## MILSANS Inspection Rating Cards
+
+The **MILSANS Results** tab adds six interactive cards:
+
+- Rated Facilities
+- Fully Compliant
+- Substantially Compliant
+- Partially Compliant
+- Non-Compliant
+- Follow-Up Required
+
+The tab uses the latest **completed** inspection for each installation-and-facility combination. An in-progress survey does not replace a completed rating.
+
+### Supported MILSANS CSV fields
+
+Required:
+- Facility
+- Inspection Date
+- Overall Inspection Rating
+
+Recommended:
+- Survey ID
+- Installation
+- Survey Status
+- Imminent Health Hazard
+- Critical Violations
+- Critical COS
+- Non-Critical Violations
+- Non-Critical COS
+- Follow-Up Required
+- Follow-Up Date
+
+Tapping a card filters the MILSANS results table and scrolls the first matching facility to the top. JSON backup and restore include MILSANS records.
+
+
+## TSFC Letter-Grade Equivalents
+
+Sentinel displays the Table 8-4 letter-grade equivalent next to the official MILSANS compliance rating:
+
+- Fully Compliant = A
+- Substantially Compliant = B
+- Partially Compliant = C
+- Noncompliant = F
+
+There is no D grade in Table 8-4.
+
+Sentinel labels these as **TSFC letter-grade equivalents** because official implementation of a letter-grading system requires a formal policy from the regulatory authority. The compliance rating remains displayed with the grade.
+
+
+## Combined FPAR and MILSANS Dashboard
+
+The Dashboard now has a **Dashboard data** selector:
+
+- FPAR and MILSANS
+- FPAR only
+- MILSANS only
+
+The MILSANS panel tracks the next required action. An imported required follow-up date takes priority over the routine due date. If no explicit due date is imported, Sentinel calculates it from the latest completed inspection and inspection frequency.
+
+Supported MILSANS schedule fields include:
+
+- Building Number
+- Inspection Frequency
+- Routine Due Date
+- Next Action Due Date
+- Scheduled Month
+- Due Date Basis
+- Record Type
+
+Schedule-only rows are allowed when a facility has a due date but no completed report in the imported set. These rows appear in the MILSANS due dashboard as **Not Rated** and do not appear as completed ratings in the detailed MILSANS Results table.
+
+
+## MILSANS Inspector and Deadline Tracking
+
+- Imports and displays the DOEHRS **Surveyor / Inspector** separately from the person who created the DOEHRS record.
+- When the Surveyor field is blank, Sentinel displays **Not listed in DOEHRS survey field** rather than assuming the record creator performed the inspection.
+- Adds inspector filters to the combined MILSANS dashboard and the MILSANS Results tab.
+- MILSANS management cards are labeled **Missed**, **Due Today**, **Coming Soon**, and **Upcoming**.
+- The local scheduled-month deadline is the last calendar day of the assigned month.
+- Next Action Due is the earliest applicable date among:
+  1. Required follow-up date,
+  2. Regulatory interval deadline based on the latest completed inspection, and
+  3. Local scheduled-month deadline.
+- The 7-day monthly and 14-day quarterly Coming Soon windows are Sentinel management alerts, not deadlines stated by the Tri-Service Food Code.
+
+
+## v0.4.2 MILSANS Dashboard and Printing Fixes
+
+- Corrects the dashboard structure so imported MILSANS records appear when **MILSANS only** is selected.
+- Adds separate **Import FPAR CSV** and **Import MILSANS CSV** controls at the top.
+- Adds top-level **Export FPAR CSV** and **Export MILSANS CSV** controls.
+- Routine MILSANS action dates use the last day of the locally scheduled month.
+- A required follow-up date still takes priority over the routine month-end action date.
+- Adds **Coming up due — future action dates first** sorting.
+- Adds an Action Status filter to the MILSANS Results tab.
+- Makes every Inspection Rating Key item clickable.
+- **Print Current View** now prints:
+  - FPAR cards,
+  - MILSANS due cards,
+  - detailed MILSANS Results, or
+  - both FPAR and MILSANS dashboard sections.
+
+
+## v0.4.3 MILSANS Interval Status and Month Filter
+
+- Removes the visible Next Action Due and Regulatory Due columns.
+- A required follow-up date still takes priority when one exists.
+- Otherwise, Missed/Due Today/Coming Soon/Upcoming is based on the latest completed inspection:
+  - Monthly: plus one calendar month.
+  - Quarterly: plus three calendar months.
+- Adds a dynamic Coming Due Month filter to both the Dashboard and MILSANS Results.
+- Adds Scheduled Month sorting.
+- The scheduled month is a local planning field and does not reset an overdue monthly or quarterly interval.
+- Exported MILSANS CSV files contain Scheduled Month, Days to Due, and Due Status without exact routine/action due-date columns.
+
+
+## v0.4.4 Action Date and Reliable Printing
+- Restores Action Date. Follow-up date takes priority; otherwise it is the last day of the scheduled month.
+- Status remains based on the required monthly or quarterly interval.
+- Adds separate Print FPAR Cards and Print MILSANS Cards buttons.
+- Fixes the missing printTitle element reference that prevented iPhone Safari from opening the print sheet.
+
+
+## v0.4.5 Scheduled Date and Missed Month
+
+- Routine MILSANS Scheduled Date is the 25th of the locally scheduled month.
+- A documented required follow-up date continues to take priority.
+- Cards display Last Inspected, Scheduled Date, and Missed Month.
+- Missed Month is based on the monthly or quarterly interval that expired.
+- Fixes malformed duplicate mobile CSS that caused Scheduled Month and Follow-Up text to overlap.
+- Keeps separate Print FPAR Cards and Print MILSANS Cards controls.
+
+
+## v0.4.6 Separate Dashboards and Clean MILSANS Cards
+
+- FPAR Dashboard and MILSANS Dashboard are separate tabs.
+- MILSANS Results remains a separate detailed-history tab.
+- Routine MILSANS required dates are the 25th of the month reached by the monthly or quarterly interval.
+- Cards show Last Inspection Date, Scheduled Date, and Missed Inspection Date.
+- Scheduled Date uses the 25th of the locally scheduled month unless a required follow-up date applies.
+- Missed Inspection Date appears only after the required 25th has passed.
+- Rebuilt mobile and print grids to prevent Follow-Up, Survey ID, and date labels from overlapping.
+
+
+## v0.4.7 Missed History and Assigned Team
+
+- MILSANS Dashboard cards now show rating, TSFC grade, Last Inspector, Assigned Team, Days to Due, Due Status, Scheduled Date, Last Inspection Date, all Missed Inspection Dates, Critical, Non-Critical, COS, IHH, and Follow-Up Required.
+- Missed Inspection Dates repeat every one month for monthly facilities or every three months for quarterly facilities, always on the 25th.
+- The list resets automatically when a newer completed inspection is imported.
+- Required follow-up dates are tracked separately and take precedence over routine cycles.
+- CSV import/export supports Last Inspector, Assigned Team, Scheduled Date, and Missed Inspection Dates.
+
+
+## v0.4.8 Scheduled Date and Assigned Team
+
+- Places **Assigned Team** directly beside **Scheduled Date** on MILSANS Dashboard cards.
+- Uses the same side-by-side arrangement on printed MILSANS facility cards.
+- Last Inspector remains a separate full-width field so users can distinguish who completed the previous inspection from who owns the upcoming inspection.
+- Desktop MILSANS tables also place Assigned Team immediately after Scheduled Date.
+
+
+## v0.4.9 MILSANS Dashboard Cleanup
+
+- Removes the **MILSANS Results** and **Facilities** navigation tabs.
+- Moves the **Inspection Rating Key** into the MILSANS Dashboard.
+- Makes the rating key filter the visible MILSANS Dashboard cards.
+- Places **Last Inspection Date** beside **Last Inspector**.
+- Places **Survey ID** in a full-width final row at the bottom of every MILSANS facility card.
+- Preserves Scheduled Date beside Assigned Team on screen and in printed cards.
+
+
+## v0.5.0 Quick Page Navigation
+
+- Adds floating Up and Down arrow buttons to long pages.
+- Up returns to the top of the current page.
+- Down moves to the bottom of the current page.
+- The button for the direction already reached is disabled.
+- The controls hide when the page is too short to require scrolling.
+- The controls do not appear on printed facility cards.

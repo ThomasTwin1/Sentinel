@@ -1,11 +1,10 @@
-const CACHE_NAME = "sentinel-tracker-v0.2.2";
+const CACHE_NAME = "sentinel-tracker-v0.5.0";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
-  "./manifest.webmanifest",
-  "./icon.svg"
+  "./manifest.webmanifest"
 ];
 
 self.addEventListener("install", (event) => {
