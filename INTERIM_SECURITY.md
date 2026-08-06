@@ -1,4 +1,4 @@
-# Sentinel v0.6.0 Interim Security Guide
+# Sentinel v0.6.1 Interim Security Guide
 
 ## What this edition improves
 
@@ -11,7 +11,7 @@
 - Migrates older plaintext Sentinel browser data only after the encrypted write succeeds, then removes the legacy plaintext entry.
 - Creates encrypted `.sentinel` backups instead of plaintext JSON backups.
 - Limits imported files to 2 MB, 10,000 CSV rows, 64 columns, 2,000 characters per field, and 2,000 imported records.
-- Rejects binary/null-byte CSV content and unexpected file extensions.
+- Rejects binary/null-byte CSV content and unexpected file extensions. The bounded parser accepts common export variations such as whitespace around quoted values and non-structural quote characters inside unquoted labels, while still rejecting unclosed or structurally ambiguous quoted fields with a line and column location.
 - Warns before plaintext CSV export or printing and neutralizes common spreadsheet-formula injection prefixes.
 - Validates a backup's passphrase and complete versioned state schema before replacing the current encrypted vault; failed verification leaves the previous vault unchanged.
 - Adds a restrictive browser Content Security Policy and limits offline caching to the application shell with release-scoped, network-first cache updates.

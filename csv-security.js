@@ -13,6 +13,11 @@
     let inQuotes = false;
     let quoteClosed = false;
 
+    const locationFor = index => {
+      const lines = text.slice(0, index).split(/\r\n|\r|\n/);
+      return `line ${lines.length}, column ${lines[lines.length - 1].length + 1}`;
+    };
+
     const appendToField = value => {
       field += value;
       if (field.length > MAX_CSV_FIELD_CHARS) {
@@ -63,15 +68,29 @@
         if (char === "\r" && next === "\n") index += 1;
         commitRow();
       } else if (char === '"') {
-        if (field.length || quoteClosed) throw new Error("The CSV contains an unexpected quote.");
-        inQuotes = true;
+        if (quoteClosed) {
+          throw new Error(`The CSV contains an unexpected quote near ${locationFor(index)}.`);
+        }
+        if (field.trim() === "") {
+          // Several inspection-system exports place harmless whitespace before a
+          // quoted value. Treat the quote as structural and discard that padding.
+          field = "";
+          inQuotes = true;
+        } else {
+          // A bare quote in an otherwise unquoted field (for example, 12" serving
+          // line) is data, not a delimiter. Bounds still apply to the full field.
+          appendToField(char);
+        }
       } else {
-        if (quoteClosed) throw new Error("The CSV contains content after a closing quote.");
+        if (quoteClosed && (char === " " || char === "\t")) continue;
+        if (quoteClosed) {
+          throw new Error(`The CSV contains content after a closing quote near ${locationFor(index)}.`);
+        }
         appendToField(char);
       }
     }
 
-    if (inQuotes) throw new Error("The CSV contains an unclosed quoted field.");
+    if (inQuotes) throw new Error(`The CSV contains an unclosed quoted field near ${locationFor(text.length)}.`);
     commitRow();
     return rows;
   }

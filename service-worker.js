@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "sentinel-tracker-";
-const CACHE_NAME = `${CACHE_PREFIX}v0.6.0-conference`;
+const CACHE_NAME = `${CACHE_PREFIX}v0.6.1-csv-compatibility`;
 const APP_SHELL = [
   "./",
   "./index.html",
