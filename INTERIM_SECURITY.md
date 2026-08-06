@@ -1,4 +1,4 @@
-# Sentinel v0.6.1 Interim Security Guide
+# Sentinel v0.6.2 Interim Security Guide
 
 ## What this edition improves
 

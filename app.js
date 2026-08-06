@@ -147,6 +147,7 @@
     els.loadConferenceDemoBtn.addEventListener("click", loadConferenceDemo);
     els.gradeBoardLoadDemoBtn.addEventListener("click", loadConferenceDemo);
     els.printGradeBoardBtn.addEventListener("click", printGradeBoard);
+    els.gradeBoardGrid.addEventListener("click", openGradeBoardFacility);
     els.deleteVaultBtn.addEventListener("click", deleteLocalVault);
     els.restoreBackupForm.addEventListener("submit", confirmRestoreBackup);
     els.cancelRestoreBackupBtn.addEventListener("click", closeRestoreBackupDialog);
@@ -1601,7 +1602,19 @@
       return `
         <article class="grade-board-card grade-${grade.toLowerCase()}">
           <div class="grade-board-card-heading">
-            <span class="grade-board-letter" aria-label="Letter grade equivalent ${grade}">${grade}</span>
+            <div class="grade-board-letter-control">
+              <button
+                type="button"
+                class="grade-board-letter"
+                data-open-grade-facility
+                data-facility-name="${escapeAttr(record.facilityName)}"
+                data-installation="${escapeAttr(record.installation || "")}"
+                data-survey-id="${escapeAttr(record.surveyId || "")}"
+                aria-label="Open ${escapeAttr(record.facilityName)} inspection details, letter grade ${grade}"
+                title="Open inspection details"
+              >${grade}</button>
+              <span>View details</span>
+            </div>
             <div>
               <h3>${escapeHtml(record.facilityName)}</h3>
               <p>${escapeHtml(record.installation || "Example installation")}${record.buildingNumber ? ` · Bldg ${escapeHtml(record.buildingNumber)}` : ""}</p>
@@ -1620,6 +1633,28 @@
     }).join("");
 
     els.gradeBoardUpdated.textContent = `Fictional scenario • ${records.length} completed facility ratings • status calculated as of ${formatDate(asOfDate)}`;
+  }
+
+  function openGradeBoardFacility(event) {
+    const gradeButton = event.target.closest("[data-open-grade-facility]");
+    if (!gradeButton) return;
+
+    const facilityName = gradeButton.dataset.facilityName || "";
+    const installation = gradeButton.dataset.installation || "";
+    const surveyId = gradeButton.dataset.surveyId || "";
+    const searchValue = surveyId || `${facilityName} ${installation}`.trim();
+
+    els.milsansSearch.value = searchValue;
+    els.milsansRatingFilter.value = "";
+    els.milsansFollowUpFilter.value = "";
+    els.milsansDueStatusResultsFilter.value = "";
+    els.milsansMonthFilter.value = "";
+    els.milsansInspectorFilter.value = "";
+
+    switchTab("milsans");
+    renderMilsans();
+    scrollToFirstMilsansRecord();
+    showToast(`Opened ${facilityName || "DFAC"} inspection details.`);
   }
 
 

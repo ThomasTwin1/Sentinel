@@ -289,6 +289,20 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
   border-bottom: 1px solid var(--border);
 }
 
+.grade-board-letter-control {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+}
+
+.grade-board-letter-control > span {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}
+
 .grade-board-letter {
   display: grid;
   place-items: center;
@@ -296,10 +310,18 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
   height: 76px;
   border: 4px solid currentColor;
   border-radius: 12px;
+  padding: 0;
   font-size: 3rem;
+  font-family: inherit;
   font-weight: 950;
   line-height: 1;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
 }
+
+.grade-board-letter:hover { transform: translateY(-2px); box-shadow: 0 5px 12px rgba(20, 48, 32, 0.18); }
+.grade-board-letter:active { transform: translateY(0); }
+.grade-board-letter:focus-visible { outline: 4px solid #111; outline-offset: 3px; }
 
 .grade-a .grade-board-letter { color: #287347; background: #e4f2e9; }
 .grade-b .grade-board-letter { color: #2e5d84; background: #e7f1f9; }

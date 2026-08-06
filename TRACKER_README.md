@@ -1,8 +1,8 @@
-# Sentinel Facility Due-Date Tracker v0.6.1 Secure Conference Prototype
+# Sentinel Facility Due-Date Tracker v0.6.2 Secure Conference Prototype
 
-A dependency-free browser prototype for validating Sentinel's first MVP feature: showing which food facilities are overdue, due today, due soon, or upcoming. Version 0.6.1 adds a passphrase-encrypted local vault, fail-closed lifecycle locking, transactional encrypted-backup restore, bounded imports with common CSV quote compatibility, and a fictional conference demo. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
+A dependency-free browser prototype for validating Sentinel's first MVP feature: showing which food facilities are overdue, due today, due soon, or upcoming. Version 0.6.2 adds direct internal navigation from each DFAC letter grade to its matching inspection details, alongside the passphrase-encrypted local vault, fail-closed lifecycle locking, transactional encrypted-backup restore, bounded imports with common CSV quote compatibility, and fictional conference demo. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
 
-## Working criteria in v0.6.1
+## Working criteria in v0.6.2
 
 - **Last Inspected** uses the latest inspection date listed for each facility.
 - Workflow status does not affect the countdown; Draft, Submitted, and Accepted rows are treated the same for date selection.
@@ -69,7 +69,7 @@ The tests cover monthly month-end behavior, weekly and quarterly calculations, s
 
 ## Architecture
 
-This v0.6.1 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. Application records are encrypted before being written to browser local storage, but decrypted data and the key exist in memory while Sentinel is unlocked. Shared team access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
+This v0.6.2 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. Application records are encrypted before being written to browser local storage, but decrypted data and the key exist in memory while Sentinel is unlocked. Shared team access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
 
 - v0.2.7 fixes the iPhone **Print Facility Cards** button so it correctly opens Safari's print sheet from the local Sentinel build.
 
@@ -271,3 +271,11 @@ Schedule-only rows are allowed when a facility has a due date but no completed r
 - The button for the direction already reached is disabled.
 - The controls hide when the page is too short to require scrolling.
 - The controls do not appear on printed facility cards.
+
+
+## v0.6.2 Clickable DFAC Grades
+
+- Makes every letter grade on the DFAC Grade Board a keyboard- and touch-accessible button.
+- Opens the matching latest inspection details inside Sentinel and positions that facility at the top of the results.
+- Clears conflicting detail filters so the selected DFAC is not accidentally hidden.
+- Keeps facility names and locations inside Sentinel instead of sending them to an external mapping or search service.
