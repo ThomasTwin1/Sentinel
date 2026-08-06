@@ -1,5 +1,7 @@
 # Sentinel
 
+> **Secure conference prototype (v0.6.0):** This branch combines a passphrase-encrypted local vault with an in-memory, fictional DFAC Grade Board for phone and conference demonstrations. It adds transactional backup verification, immediate background privacy locking, bounded imports, and safe service-worker upgrades. It is **not** an approved Army information system and does not authorize CUI, PII, classified, or operational data. See [INTERIM_SECURITY.md](INTERIM_SECURITY.md).
+
 **Protecting Soldiers Through Smarter Food Protection.**
 
 Sentinel is an AI-powered **Army Veterinary Services Operations Suite** focused on food protection, food inspections, food defense, foodborne illness investigations, and operational readiness.
@@ -216,7 +218,7 @@ Sentinel should be measured by its ability to improve outcomes such as:
 
 ## Current Status
 
-Sentinel now includes a dependency-free browser prototype for FPAR and MILSANS inspection tracking. The current v0.5.0 build supports separate dashboards, local CSV imports, due-date and missed-history calculations, inaccessible-facility tracking, printable facility cards, fictional demo fixtures, and browser-local backups.
+Sentinel now includes a dependency-free browser prototype for FPAR and MILSANS inspection tracking. The current v0.6.0 build supports separate dashboards, a fictional DFAC letter-grade conference view, local CSV imports, due-date and missed-history calculations, inaccessible-facility tracking, printable facility cards and Grade Board, and encrypted browser-local backups.
 
 See [TRACKER_README.md](TRACKER_README.md) for feature details and test commands. Public testing must use fictional fixtures. Authorized operational-data evaluation must use a downloaded local copy and follow [LOCAL_REAL_DATA_TESTING.md](LOCAL_REAL_DATA_TESTING.md); real exports must never be uploaded or committed to this public repository.
 

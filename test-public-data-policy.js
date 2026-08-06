@@ -4,7 +4,11 @@ const assert = require("node:assert/strict");
 const { execFileSync } = require("node:child_process");
 const { readFileSync } = require("node:fs");
 
-const trackedFiles = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
+const trackedFiles = execFileSync(
+  "git",
+  ["-c", `safe.directory=${process.cwd().replace(/\\/g, "/")}`, "ls-files", "-z"],
+  { encoding: "utf8" }
+)
   .split("\0")
   .filter(Boolean)
   .map(path => path.replace(/\\/g, "/"));
@@ -17,9 +21,10 @@ const allowedCsv = [
 const forbidden = trackedFiles.filter(path => {
   if (/\.csv$/i.test(path)) return !allowedCsv.some(pattern => pattern.test(path));
   if (/\.(xlsx?|pdf)$/i.test(path)) return true;
+  if (/\.sentinel$/i.test(path)) return true;
   if (/^(Milsans|PDF|Regs|VSIMS\/FPARS|__MACOSX)\//i.test(path)) return true;
   if (/(Humphreys|FPARView|InaccessibleFCView)/i.test(path)) return true;
-  if (/^sentinel-(tracker-backup|inspection-readiness|milsans-)/i.test(path)) return true;
+  if (/^sentinel-(tracker-backup|encrypted-backup|inspection-readiness|milsans-)/i.test(path)) return true;
   return false;
 });
 

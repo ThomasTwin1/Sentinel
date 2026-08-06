@@ -1,7 +1,11 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "sentinelInspectionTrackerV01";
+  const LEGACY_STORAGE_KEY = "sentinelInspectionTrackerV01";
+  const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
+  const MAX_IMPORTED_RECORDS = 2000;
+  const MAX_AUDIT_EVENTS = 500;
+  const AUTO_LOCK_MS = 5 * 60 * 1000;
   const FREQUENCIES = {
     DAILY: { label: "Daily", dueSoon: 0 },
     WEEKLY: { label: "Weekly", dueSoon: 2 },
@@ -11,7 +15,14 @@
     ANNUAL: { label: "Annual", dueSoon: 60 }
   };
 
-  let state = loadState();
+  let state = emptyState();
+  let vault;
+  let vaultUnlocked = false;
+  let conferenceDemoMode = false;
+  let saveQueue = Promise.resolve();
+  let autoLockTimer;
+  let pendingBackup = null;
+  let failedUnlockAttempts = 0;
   let asOfDate = startOfDay(new Date());
   let toastTimer;
 
@@ -19,12 +30,14 @@
 
   document.addEventListener("DOMContentLoaded", init);
 
-  function init() {
+  async function init() {
     cacheElements();
     bindEvents();
+    document.body.classList.add("vault-locked");
     els.asOfDate.value = toISO(asOfDate);
     els.milsansAsOfDate.value = toISO(asOfDate);
-    renderAll();
+    registerServiceWorker();
+    initializeSecurity();
   }
 
   function cacheElements() {
@@ -48,6 +61,11 @@
       "milsansSummaryCards", "milsansRatingKey", "milsansDescription", "milsansRecordCount", "milsansTableBody", "milsansResults",
       "milsansDueSummaryCards", "milsansDueRatingFilter", "milsansDueStatusFilter", "milsansDueMonthFilter", "milsansDueInspectorFilter", "milsansDueSortMode", "milsansDueDescription", "milsansDueRecordCount", "milsansDueTableBody", "milsansDueRequirements",
       "quickScrollControls", "scrollToTopBtn", "scrollToBottomBtn", "toast"
+      , "securityGate", "securityGateTitle", "securityGateDescription", "securityForm", "securityPassphrase", "securityConfirmRow", "securityPassphraseConfirm",
+      "securityLegacyNotice", "securityError", "securitySubmitBtn", "openDemoModeBtn", "deleteVaultBtn", "lockBtn", "vaultStatus",
+      "loadConferenceDemoBtn", "gradeBoardLoadDemoBtn", "printGradeBoardBtn", "gradeBoardSummary", "gradeBoardGrid", "gradeBoardUpdated", "privacyShield",
+      "restoreBackupDialog", "restoreBackupForm", "restoreBackupPassphrase", "restoreBackupError", "confirmRestoreBackupBtn",
+      "cancelRestoreBackupBtn", "closeRestoreBackupDialog"
     ].forEach(id => { els[id] = document.getElementById(id); });
   }
 
@@ -122,40 +140,494 @@
     els.scrollToBottomBtn.addEventListener("click", scrollPageToBottom);
     window.addEventListener("scroll", updateQuickScrollControls, { passive: true });
     window.addEventListener("resize", updateQuickScrollControls);
+
+    els.securityForm.addEventListener("submit", handleSecuritySubmit);
+    els.lockBtn.addEventListener("click", () => lockApplication("Locked by user."));
+    els.openDemoModeBtn.addEventListener("click", startConferenceDemoMode);
+    els.loadConferenceDemoBtn.addEventListener("click", loadConferenceDemo);
+    els.gradeBoardLoadDemoBtn.addEventListener("click", loadConferenceDemo);
+    els.printGradeBoardBtn.addEventListener("click", printGradeBoard);
+    els.deleteVaultBtn.addEventListener("click", deleteLocalVault);
+    els.restoreBackupForm.addEventListener("submit", confirmRestoreBackup);
+    els.cancelRestoreBackupBtn.addEventListener("click", closeRestoreBackupDialog);
+    els.closeRestoreBackupDialog.addEventListener("click", closeRestoreBackupDialog);
+    ["pointerdown", "keydown", "touchstart"].forEach(eventName => {
+      window.addEventListener(eventName, noteUserActivity, { passive: true });
+    });
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("pageshow", handlePageShow);
   }
 
-  function switchTab(tabId) {
+  function switchTab(tabId, updateHash = true) {
+    if (!document.getElementById(tabId)) return;
     document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.tab === tabId));
     document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === tabId));
+    if (updateHash && history.replaceState) history.replaceState(null, "", `#${tabId}`);
   }
 
-  function loadState() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (parsed && Array.isArray(parsed.facilities) && Array.isArray(parsed.customHolidays)) {
-        return {
-          ...parsed,
-          facilities: parsed.facilities.map(withAccessDefaults),
-          milsansInspections: Array.isArray(parsed.milsansInspections)
-            ? parsed.milsansInspections.map(withMilsansDefaults)
-            : [],
-          audit: Array.isArray(parsed.audit) ? parsed.audit : []
-        };
-      }
-    } catch (error) {
-      console.warn("Could not load saved tracker data.", error);
+  function emptyState() {
+    return { schemaVersion: 1, facilities: [], customHolidays: [], milsansInspections: [], audit: [] };
+  }
+
+  function normalizePersistedState(parsed) {
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("The saved Sentinel data has an invalid structure.");
     }
-    return { facilities: [], customHolidays: [], milsansInspections: [], audit: [] };
+    const schemaVersion = parsed.schemaVersion ?? 1;
+    if (schemaVersion !== 1) throw new Error(`Unsupported Sentinel data version: ${schemaVersion}.`);
+    if (!Array.isArray(parsed.facilities) || !Array.isArray(parsed.customHolidays)) {
+      throw new Error("The saved Sentinel data is missing required arrays.");
+    }
+    if (parsed.facilities.length > MAX_IMPORTED_RECORDS) throw new Error("The saved data contains too many facilities for this interim edition.");
+    if (parsed.customHolidays.length > 500) throw new Error("The saved data contains too many custom calendar entries.");
+    if (Array.isArray(parsed.milsansInspections) && parsed.milsansInspections.length > MAX_IMPORTED_RECORDS) {
+      throw new Error("The saved data contains too many MILSANS records for this interim edition.");
+    }
+
+    const normalized = {
+      schemaVersion: 1,
+      facilities: parsed.facilities.map((facility, index) => normalizeFacilityRecord(facility, index)),
+      customHolidays: parsed.customHolidays.map((holiday, index) => normalizeHolidayRecord(holiday, index)),
+      milsansInspections: Array.isArray(parsed.milsansInspections)
+        ? parsed.milsansInspections.map((record, index) => normalizeMilsansRecord(record, index))
+        : [],
+      audit: Array.isArray(parsed.audit)
+        ? parsed.audit.slice(-MAX_AUDIT_EVENTS).map(normalizeAuditEntry)
+        : []
+    };
+    assertUniqueIds(normalized.facilities, "facility");
+    assertUniqueIds(normalized.customHolidays, "calendar entry");
+    assertUniqueIds(normalized.milsansInspections, "MILSANS record");
+    assertUniqueIds(normalized.audit, "audit event");
+    return normalized;
+  }
+
+  function boundedString(value, label, maxLength, required = false) {
+    const text = String(value ?? "").trim();
+    if (required && !text) throw new Error(`${label} is required.`);
+    if (text.length > maxLength) throw new Error(`${label} exceeds the ${maxLength}-character limit.`);
+    if (/\u0000/.test(text)) throw new Error(`${label} contains invalid content.`);
+    return text;
+  }
+
+  function boundedWholeNumber(value, label, max = 100000) {
+    const number = Number(value ?? 0);
+    if (!Number.isInteger(number) || number < 0 || number > max) throw new Error(`${label} is invalid.`);
+    return number;
+  }
+
+  function strictBoolean(value, label, defaultValue) {
+    if (value === undefined && defaultValue !== undefined) return defaultValue;
+    if (typeof value !== "boolean") throw new Error(`${label} must be true or false.`);
+    return value;
+  }
+
+  function assertUniqueIds(records, label) {
+    const ids = new Set();
+    records.forEach(record => {
+      if (ids.has(record.id)) throw new Error(`The saved data contains a duplicate ${label} ID.`);
+      ids.add(record.id);
+    });
+  }
+
+  function optionalIsoDate(value, label, includeTime = false) {
+    if (value === null || value === undefined || value === "") return null;
+    const text = boundedString(value, label, 40);
+    const pattern = includeTime ? /^\d{4}-\d{2}-\d{2}T/ : /^\d{4}-\d{2}-\d{2}$/;
+    if (!pattern.test(text) || Number.isNaN(new Date(includeTime ? text : `${text}T00:00:00`).getTime())) {
+      throw new Error(`${label} is not a valid ISO date.`);
+    }
+    return text;
+  }
+
+  function normalizeFacilityRecord(facility, index) {
+    if (!facility || typeof facility !== "object" || Array.isArray(facility)) throw new Error(`Facility ${index + 1} is invalid.`);
+    const frequency = boundedString(facility.frequency, `Facility ${index + 1} frequency`, 20, true).toUpperCase();
+    if (!FREQUENCIES[frequency]) throw new Error(`Facility ${index + 1} has an unsupported frequency.`);
+    return {
+      id: boundedString(facility.id, `Facility ${index + 1} ID`, 100, true),
+      name: boundedString(facility.name, `Facility ${index + 1} name`, 120, true),
+      buildingNumber: boundedString(facility.buildingNumber, `Facility ${index + 1} building`, 40, true),
+      installation: boundedString(facility.installation, `Facility ${index + 1} installation`, 120, true),
+      agency: boundedString(facility.agency, `Facility ${index + 1} agency`, 80, true),
+      assignedInspector: boundedString(facility.assignedInspector, `Facility ${index + 1} inspector`, 120),
+      frequency,
+      lastConductedDate: optionalIsoDate(facility.lastConductedDate, `Facility ${index + 1} last inspection`),
+      active: strictBoolean(facility.active, `Facility ${index + 1} active flag`, true),
+      inaccessible: strictBoolean(facility.inaccessible, `Facility ${index + 1} inaccessible flag`, false),
+      inaccessibilityReason: boundedString(facility.inaccessibilityReason, `Facility ${index + 1} access reason`, 300),
+      inaccessibilityDate: optionalIsoDate(facility.inaccessibilityDate, `Facility ${index + 1} access date`),
+      createdAt: optionalIsoDate(facility.createdAt, `Facility ${index + 1} created timestamp`, true),
+      updatedAt: optionalIsoDate(facility.updatedAt, `Facility ${index + 1} updated timestamp`, true)
+    };
+  }
+
+  function normalizeHolidayRecord(holiday, index) {
+    if (!holiday || typeof holiday !== "object" || Array.isArray(holiday)) throw new Error(`Calendar entry ${index + 1} is invalid.`);
+    return {
+      id: boundedString(holiday.id, `Calendar entry ${index + 1} ID`, 100, true),
+      date: optionalIsoDate(holiday.date, `Calendar entry ${index + 1} date`),
+      name: boundedString(holiday.name, `Calendar entry ${index + 1} name`, 120, true),
+      scope: boundedString(holiday.scope || "All", `Calendar entry ${index + 1} scope`, 120),
+      createdAt: optionalIsoDate(holiday.createdAt, `Calendar entry ${index + 1} timestamp`, true)
+    };
+  }
+
+  function normalizeMilsansRecord(record, index) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) throw new Error(`MILSANS record ${index + 1} is invalid.`);
+    const normalized = withMilsansDefaults(record);
+    return {
+      id: boundedString(normalized.id, `MILSANS record ${index + 1} ID`, 100, true),
+      surveyId: boundedString(normalized.surveyId, `MILSANS record ${index + 1} survey ID`, 100),
+      installation: boundedString(normalized.installation, `MILSANS record ${index + 1} installation`, 120),
+      facilityName: boundedString(normalized.facilityName, `MILSANS record ${index + 1} facility`, 160, true),
+      inspectionDate: optionalIsoDate(normalized.inspectionDate, `MILSANS record ${index + 1} inspection date`) || "",
+      surveyStatus: boundedString(normalized.surveyStatus, `MILSANS record ${index + 1} status`, 40, true),
+      rating: boundedString(normalized.rating, `MILSANS record ${index + 1} rating`, 40),
+      imminentHealthHazard: strictBoolean(record.imminentHealthHazard, `MILSANS record ${index + 1} hazard flag`, false),
+      criticalViolations: boundedWholeNumber(normalized.criticalViolations, `MILSANS record ${index + 1} critical count`, 1000),
+      criticalCos: boundedWholeNumber(normalized.criticalCos, `MILSANS record ${index + 1} critical COS`, 1000),
+      nonCriticalViolations: boundedWholeNumber(normalized.nonCriticalViolations, `MILSANS record ${index + 1} noncritical count`, 1000),
+      nonCriticalCos: boundedWholeNumber(normalized.nonCriticalCos, `MILSANS record ${index + 1} noncritical COS`, 1000),
+      followUpRequired: strictBoolean(record.followUpRequired, `MILSANS record ${index + 1} follow-up flag`, false),
+      followUpDate: optionalIsoDate(normalized.followUpDate, `MILSANS record ${index + 1} follow-up date`),
+      frequency: boundedString(normalized.frequency, `MILSANS record ${index + 1} frequency`, 20, true),
+      buildingNumber: boundedString(normalized.buildingNumber, `MILSANS record ${index + 1} building`, 40),
+      routineDueDate: optionalIsoDate(normalized.routineDueDate, `MILSANS record ${index + 1} routine due date`),
+      dueDate: optionalIsoDate(normalized.dueDate, `MILSANS record ${index + 1} due date`),
+      scheduledMonth: boundedString(normalized.scheduledMonth, `MILSANS record ${index + 1} scheduled month`, 40),
+      dueDateBasis: boundedString(normalized.dueDateBasis, `MILSANS record ${index + 1} due basis`, 160),
+      recordType: boundedString(normalized.recordType, `MILSANS record ${index + 1} record type`, 80),
+      inspector: boundedString(normalized.inspector, `MILSANS record ${index + 1} inspector`, 120),
+      assignedTeam: boundedString(normalized.assignedTeam, `MILSANS record ${index + 1} team`, 120),
+      scheduledDate: optionalIsoDate(normalized.scheduledDate, `MILSANS record ${index + 1} scheduled date`),
+      recordCreatedBy: boundedString(normalized.recordCreatedBy, `MILSANS record ${index + 1} creator`, 120),
+      scheduledMonthEndDate: optionalIsoDate(normalized.scheduledMonthEndDate, `MILSANS record ${index + 1} month end`),
+      importedAt: optionalIsoDate(record.importedAt, `MILSANS record ${index + 1} import timestamp`, true)
+    };
+  }
+
+  function normalizeAuditEntry(entry) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new Error("An audit event is invalid.");
+    const source = entry;
+    const timestamp = optionalIsoDate(source.timestamp, "Audit timestamp", true);
+    if (!timestamp) throw new Error("Audit timestamp is required.");
+    return {
+      id: boundedString(source.id, "Audit ID", 100, true),
+      action: boundedString(source.action, "Audit action", 80, true),
+      entityId: boundedString(source.entityId, "Audit entity", 100),
+      changedFields: Array.isArray(source.changedFields)
+        ? source.changedFields.slice(0, 30).map(field => boundedString(field, "Audit field", 80))
+        : unique([...Object.keys(source.previous || {}), ...Object.keys(source.next || {})]).slice(0, 30),
+      details: summarizeAuditDetails(source.details || source.next),
+      timestamp
+    };
+  }
+
+  function loadLegacyState() {
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw) return { found: false, data: null, error: null };
+    try {
+      return { found: true, data: normalizePersistedState(JSON.parse(raw)), error: null };
+    } catch (error) {
+      console.warn("Could not read older plaintext tracker data.", error);
+      return { found: true, data: null, error };
+    }
   }
 
   function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (conferenceDemoMode) return;
+    if (!vaultUnlocked || !vault?.isUnlocked()) return;
+    const snapshot = JSON.parse(JSON.stringify(state));
+    saveQueue = saveQueue
+      .then(() => vault.save(snapshot))
+      .catch(error => {
+        console.error("Encrypted save failed.", error);
+        showToast("Encrypted save failed. Stop work and create a backup if possible.");
+      });
+  }
+
+  async function initializeSecurity() {
+    try {
+      vault = new window.SentinelVault.SentinelVault();
+      showSecurityGate(vault.hasVault() ? "unlock" : "setup");
+    } catch (error) {
+      els.securityGateTitle.textContent = "Secure storage unavailable";
+      els.securityGateDescription.textContent = error.message;
+      els.securityError.textContent = "Use a current browser over HTTPS or localhost. Sentinel will not open without encrypted storage.";
+      els.securityPassphrase.disabled = true;
+      els.securityPassphraseConfirm.disabled = true;
+      els.securitySubmitBtn.disabled = true;
+      els.deleteVaultBtn.hidden = true;
+    }
+  }
+
+  function showSecurityGate(mode, message = "") {
+    const setup = mode === "setup";
+    els.securityGate.dataset.mode = mode;
+    els.securityGate.hidden = false;
+    setApplicationInert(true);
+    document.body.classList.add("vault-locked");
+    els.securityGateTitle.textContent = setup ? "Create an encrypted local vault" : "Unlock Sentinel";
+    els.securityGateDescription.textContent = setup
+      ? "Choose a unique passphrase. Sentinel will encrypt all locally saved tracker data before writing it to browser storage."
+      : "Enter this device's Sentinel vault passphrase.";
+    els.securityConfirmRow.hidden = !setup;
+    els.securityPassphraseConfirm.required = setup;
+    els.securityPassphrase.autocomplete = setup ? "new-password" : "current-password";
+    els.securitySubmitBtn.textContent = setup ? "Create encrypted vault" : "Unlock";
+    els.openDemoModeBtn.hidden = false;
+    els.deleteVaultBtn.hidden = setup || !vault?.hasVault();
+    els.securityLegacyNotice.hidden = !(setup && Boolean(localStorage.getItem(LEGACY_STORAGE_KEY)));
+    els.securityError.textContent = message;
+    els.securityPassphrase.value = "";
+    els.securityPassphraseConfirm.value = "";
+    window.requestAnimationFrame(() => {
+      releasePrivacyShield();
+      els.securityPassphrase.focus();
+    });
+  }
+
+  async function handleSecuritySubmit(event) {
+    event.preventDefault();
+    const mode = els.securityGate.dataset.mode;
+    const passphrase = els.securityPassphrase.value;
+    els.securityError.textContent = "";
+    els.securitySubmitBtn.disabled = true;
+
+    try {
+      let loaded;
+      if (mode === "setup") {
+        if (passphrase !== els.securityPassphraseConfirm.value) {
+          throw new Error("The passphrases do not match.");
+        }
+        const legacy = loadLegacyState();
+        if (legacy.error) {
+          throw new Error("Older plaintext Sentinel data exists but could not be validated. It was preserved. Restore a known-good copy or clear it explicitly before creating a new vault.");
+        }
+        loaded = legacy.found ? legacy.data : emptyState();
+        await vault.create(passphrase, loaded);
+        if (legacy.found) localStorage.removeItem(LEGACY_STORAGE_KEY);
+      } else {
+        loaded = await vault.unlock(passphrase);
+      }
+
+      failedUnlockAttempts = 0;
+      unlockApplication(normalizePersistedState(loaded));
+    } catch (error) {
+      failedUnlockAttempts += mode === "unlock" ? 1 : 0;
+      els.securityError.textContent = error.message;
+      const delay = mode === "unlock" ? Math.min(30000, 1000 * (2 ** Math.min(failedUnlockAttempts, 5))) : 0;
+      window.setTimeout(() => {
+        els.securitySubmitBtn.disabled = false;
+        els.securityPassphrase.select();
+      }, delay);
+      return;
+    }
+
+    els.securitySubmitBtn.disabled = false;
+  }
+
+  function unlockApplication(loadedState) {
+    conferenceDemoMode = false;
+    state = loadedState;
+    vaultUnlocked = true;
+    els.securityGate.hidden = true;
+    setApplicationInert(false);
+    document.body.classList.remove("vault-locked");
+    document.body.classList.remove("conference-demo-mode");
+    els.vaultStatus.textContent = "Encrypted vault unlocked";
+    els.lockBtn.textContent = "Lock";
+    setImportControlsDisabled(false);
+    resetAutoLockTimer();
+    renderAll();
+    switchTab(initialTabFromHash(), false);
+    releasePrivacyShield();
+    showToast("Encrypted local vault unlocked.");
+  }
+
+  async function lockApplication(reason = "Sentinel automatically locked.") {
+    engagePrivacyShield();
+    if (conferenceDemoMode) {
+      exitConferenceDemoMode(reason === "Locked by user." ? "Fictional demo closed." : reason);
+      return;
+    }
+    if (!vaultUnlocked) return;
+    clearTimeout(autoLockTimer);
+    await saveQueue;
+    vault.lock();
+    vaultUnlocked = false;
+    state = emptyState();
+    if (els.inspectionDialog.open) els.inspectionDialog.close();
+    els.facilityForm.reset();
+    els.inspectionForm.reset();
+    renderAll();
+    els.vaultStatus.textContent = "Locked";
+    showSecurityGate("unlock", reason);
+  }
+
+  function startConferenceDemoMode() {
+    clearTimeout(autoLockTimer);
+    vault?.lock();
+    vaultUnlocked = false;
+    conferenceDemoMode = true;
+    state = buildFictionalDemoState(startOfDay(new Date()));
+    els.securityGate.hidden = true;
+    setApplicationInert(false);
+    document.body.classList.remove("vault-locked");
+    document.body.classList.add("conference-demo-mode");
+    els.vaultStatus.textContent = "Fictional demo • not saved";
+    els.lockBtn.textContent = "Exit Demo";
+    setImportControlsDisabled(true);
+    renderAll();
+    switchTab("grade-board");
+    focusGradeBoard();
+    releasePrivacyShield();
+    showToast("Fictional conference scenario loaded in memory only.");
+  }
+
+  function exitConferenceDemoMode(message = "Fictional demo closed.") {
+    engagePrivacyShield();
+    conferenceDemoMode = false;
+    state = emptyState();
+    document.body.classList.remove("conference-demo-mode");
+    setImportControlsDisabled(false);
+    renderAll();
+    els.vaultStatus.textContent = "Locked";
+    els.lockBtn.textContent = "Lock";
+    showSecurityGate(vault?.hasVault() ? "unlock" : "setup", message);
+  }
+
+  function setImportControlsDisabled(disabled) {
+    [
+      els.importCsvInput,
+      els.importMilsansCsvTopInput,
+      els.importInaccessibleCsvInput,
+      els.importJsonInput,
+      els.importMilsansCsvInput
+    ].filter(Boolean).forEach(input => {
+      input.disabled = disabled;
+      input.closest(".file-label")?.classList.toggle("disabled", disabled);
+    });
+  }
+
+  function initialTabFromHash() {
+    const candidate = window.location.hash.replace(/^#/, "");
+    return document.getElementById(candidate) ? candidate : "fpar-dashboard";
+  }
+
+  function noteUserActivity() {
+    if (vaultUnlocked && !conferenceDemoMode) resetAutoLockTimer();
+  }
+
+  function resetAutoLockTimer() {
+    clearTimeout(autoLockTimer);
+    autoLockTimer = window.setTimeout(() => lockApplication("Locked after five minutes of inactivity."), AUTO_LOCK_MS);
+  }
+
+  function handleVisibilityChange() {
+    if (document.hidden) {
+      engagePrivacyShield();
+      if (vaultUnlocked) lockApplication("Locked when Sentinel moved to the background.");
+      return;
+    }
+    if (conferenceDemoMode) {
+      releasePrivacyShield();
+    } else if (vaultUnlocked) {
+      resetAutoLockTimer();
+    }
+  }
+
+  function handlePageHide() {
+    engagePrivacyShield();
+    clearTimeout(autoLockTimer);
+    if (!vaultUnlocked || conferenceDemoMode) return;
+    vault.lock();
+    vaultUnlocked = false;
+    state = emptyState();
+  }
+
+  function handlePageShow() {
+    if (conferenceDemoMode) {
+      releasePrivacyShield();
+      return;
+    }
+    if (!vaultUnlocked && vault) {
+      showSecurityGate(vault.hasVault() ? "unlock" : "setup", "Sentinel locked when the page left the foreground.");
+    }
+  }
+
+  function engagePrivacyShield() {
+    if (!els.privacyShield) return;
+    els.privacyShield.hidden = false;
+    document.body.classList.add("privacy-protected");
+  }
+
+  function releasePrivacyShield() {
+    if (!els.privacyShield) return;
+    els.privacyShield.hidden = true;
+    document.body.classList.remove("privacy-protected");
+  }
+
+  function setApplicationInert(inert) {
+    document.querySelectorAll(".app-header, .security-banner, .tabs, main, .quick-scroll-controls")
+      .forEach(element => {
+        if (inert) {
+          element.setAttribute("inert", "");
+          element.setAttribute("aria-hidden", "true");
+        } else {
+          element.removeAttribute("inert");
+          element.removeAttribute("aria-hidden");
+        }
+      });
+  }
+
+  function focusGradeBoard() {
+    window.requestAnimationFrame(() => {
+      const board = document.getElementById("grade-board");
+      const heading = board?.querySelector("h2");
+      if (!board || !heading) return;
+      heading.setAttribute("tabindex", "-1");
+      board.scrollIntoView({ block: "start" });
+      heading.focus({ preventScroll: true });
+    });
+  }
+
+  function deleteLocalVault() {
+    if (!vault?.hasVault()) return;
+    if (!confirm("Permanently delete the encrypted Sentinel vault from this browser? This cannot be undone without an encrypted backup.")) return;
+    if (!confirm("Final confirmation: delete all locally encrypted Sentinel data on this device?")) return;
+    vault.deleteVault();
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    state = emptyState();
+    vaultUnlocked = false;
+    showSecurityGate("setup", "The local vault was deleted.");
+  }
+
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator) || !window.isSecureContext) return;
+    window.addEventListener("load", () => {
+      let reloadingForUpdate = false;
+      const hadControllerAtLoad = Boolean(navigator.serviceWorker.controller);
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!hadControllerAtLoad || reloadingForUpdate) return;
+        reloadingForUpdate = true;
+        window.location.reload();
+      });
+      navigator.serviceWorker.register("service-worker.js")
+        .then(registration => registration.update())
+        .catch(error => {
+          console.warn("Service worker registration failed.", error);
+        });
+    });
   }
 
   function renderAll() {
     renderFilterOptions();
     populateMilsansInspectorFilters();
     populateMilsansMonthFilters();
+    renderGradeBoard();
     renderDashboard();
     renderMilsansDueDashboard();
     renderFacilities();
@@ -761,8 +1233,31 @@
 
   function loadDemoData() {
     if (state.facilities.length && !confirm("Replace current tracker data with fictional demo data? Export a backup first if needed.")) return;
-    const today = startOfDay(new Date());
-    state = {
+    state = buildFictionalDemoState(startOfDay(new Date()));
+    saveState();
+    renderAll();
+    showToast("Fictional demo data loaded.");
+  }
+
+  function loadConferenceDemo() {
+    const hasData = state.facilities.length || state.milsansInspections?.length;
+    if (!conferenceDemoMode && hasData && !confirm("Replace current local tracker data with the fictional conference scenario? Create an encrypted backup first if needed.")) return;
+    state = buildFictionalDemoState(startOfDay(new Date()));
+    if (!conferenceDemoMode) {
+      addAudit("FICTIONAL_CONFERENCE_DEMO_LOADED", crypto.randomUUID(), null, {
+        recordsLoaded: state.milsansInspections.length,
+        loadedAt: new Date().toISOString()
+      });
+      saveState();
+    }
+    renderAll();
+    switchTab("grade-board");
+    showToast("Fictional DFAC grade scenario loaded.");
+  }
+
+  function buildFictionalDemoState(today) {
+    const demoState = {
+      schemaVersion: 1,
       facilities: [
         demoFacility("Freedom Dining Facility", "100", "Example Installation Korea", "Dining Facility", "Inspector Alpha", "WEEKLY", toISO(addDays(today, -14))),
         demoFacility("Liberty Exchange Food Court", "220", "Example Installation Korea", "AAFES", "Inspector Bravo", "MONTHLY", toISO(addDays(today, -27))),
@@ -774,12 +1269,10 @@
       milsansInspections: buildFictionalMilsansRecords(today),
       audit: []
     };
-    state.facilities[1].inaccessible = true;
-    state.facilities[1].inaccessibilityReason = "Temporary renovations";
-    state.facilities[1].inaccessibilityDate = toISO(addDays(today, -5));
-    saveState();
-    renderAll();
-    showToast("Fictional demo data loaded.");
+    demoState.facilities[1].inaccessible = true;
+    demoState.facilities[1].inaccessibilityReason = "Temporary renovations";
+    demoState.facilities[1].inaccessibilityDate = toISO(addDays(today, -5));
+    return demoState;
   }
 
   function demoFacility(name, buildingNumber, installation, agency, assignedInspector, frequency, lastConductedDate) {
@@ -824,12 +1317,12 @@
     const records = [
       ["MS-1001", "Example Installation North", "Valor Dining Facility Bldg 110", -92, "Completed", "Fully Compliant", "No", 0, 0, 0, 0, "No", ""],
       ["MS-1002", "Example Installation North", "Valor Dining Facility Bldg 110", -28, "Completed", "Substantially Compliant", "No", 0, 0, 2, 1, "No", ""],
-      ["MS-1003", "Example Installation Central", "Summit Commissary Bldg 300", -34, "Completed", "Fully Compliant", "No", 0, 0, 1, 1, "No", ""],
-      ["MS-1004", "Example Installation South", "Pioneer Exchange Bldg 410", -22, "Completed", "Partially Compliant", "No", 1, 1, 6, 2, "No", ""],
-      ["MS-1005", "Example Installation Central", "Mobile Food Truck Bldg 901", -18, "Completed", "Non-Compliant", "No", 1, 0, 1, 0, "Yes", -13],
-      ["MS-1006", "Example Installation North", "Discovery School Cafeteria Bldg 520", -12, "Completed", "Fully Compliant", "No", 0, 0, 0, 0, "No", ""],
-      ["MS-1007", "Example Installation South", "Harbor Community Club Bldg 620", -8, "Completed", "Substantially Compliant", "No", 0, 0, 3, 1, "No", ""],
-      ["MS-1008", "Example Installation Central", "Mobile Food Truck Bldg 901", -2, "In Progress", "", "No", 0, 0, 0, 0, "No", ""]
+      ["MS-1003", "Example Installation Central", "Summit Dining Facility Bldg 300", -34, "Completed", "Fully Compliant", "No", 0, 0, 1, 1, "No", ""],
+      ["MS-1004", "Example Installation South", "Pioneer Dining Facility Bldg 410", -22, "Completed", "Partially Compliant", "No", 1, 1, 6, 2, "No", ""],
+      ["MS-1005", "Example Installation Central", "Guardian Dining Facility Bldg 901", -18, "Completed", "Non-Compliant", "Yes", 1, 0, 1, 0, "Yes", -13],
+      ["MS-1006", "Example Installation North", "Discovery Dining Facility Bldg 520", -12, "Completed", "Fully Compliant", "No", 0, 0, 0, 0, "No", ""],
+      ["MS-1007", "Example Installation South", "Harbor Dining Facility Bldg 620", -8, "Completed", "Substantially Compliant", "No", 0, 0, 3, 1, "No", ""],
+      ["MS-1008", "Example Installation Central", "Guardian Dining Facility Bldg 901", -2, "In Progress", "", "No", 0, 0, 0, 0, "No", ""]
     ];
 
     return records.map(([surveyId, installation, facilityName, dateOffset, surveyStatus, rating, ihh, critical, criticalCos, nonCritical, nonCriticalCos, followUp, followUpOffset]) => ({
@@ -879,7 +1372,7 @@
     if (!file) return;
 
     try {
-      const rows = parseCsv(await file.text());
+      const rows = parseCsv(await readCsvFile(file));
       const headerIndex = rows.findIndex(row => {
         const normalized = row.map(normalizeHeader);
         return normalized.includes("facility")
@@ -1017,6 +1510,9 @@
         .filter(record => record.facilityName && (record.inspectionDate || record.dueDate));
 
       if (!records.length) throw new Error("No MILSANS facility records with an inspection date or due date were found.");
+      if (records.length > MAX_IMPORTED_RECORDS) {
+        throw new Error(`The file contains more than ${MAX_IMPORTED_RECORDS.toLocaleString()} usable MILSANS records.`);
+      }
 
       const uniqueRecords = [];
       const seen = new Set();
@@ -1027,6 +1523,9 @@
         if (seen.has(key)) return;
         seen.add(key);
         uniqueRecords.push(record);
+        if (uniqueRecords.length > MAX_IMPORTED_RECORDS) {
+          throw new Error(`The file contains more than ${MAX_IMPORTED_RECORDS.toLocaleString()} unique MILSANS records.`);
+        }
       });
 
       if (state.milsansInspections?.length && !confirm(
@@ -1048,6 +1547,79 @@
     } catch (error) {
       alert(`Could not import MILSANS CSV: ${error.message}`);
     }
+  }
+
+
+  function renderGradeBoard() {
+    if (!els.gradeBoardGrid || !els.gradeBoardSummary) return;
+
+    const records = getMilsansDueRecords()
+      .filter(record => record.surveyStatus === "Completed" && record.rating && record.inspectionDate)
+      .sort((a, b) => {
+        const rank = { F: 0, C: 1, B: 2, A: 3 };
+        return (rank[tsfcLetterGrade(a.rating)] ?? 4) - (rank[tsfcLetterGrade(b.rating)] ?? 4)
+          || a.facilityName.localeCompare(b.facilityName);
+      });
+
+    const counts = { A: 0, B: 0, C: 0, F: 0 };
+    records.forEach(record => { counts[tsfcLetterGrade(record.rating)] += 1; });
+    const followUps = records.filter(record => record.followUpRequired).length;
+
+    els.gradeBoardSummary.innerHTML = ["A", "B", "C", "F"].map(grade => `
+      <div class="grade-board-stat grade-${grade.toLowerCase()}">
+        <strong>${grade}</strong>
+        <span>${counts[grade]} facilit${counts[grade] === 1 ? "y" : "ies"}</span>
+      </div>
+    `).join("") + `
+      <div class="grade-board-stat follow-up">
+        <strong>${followUps}</strong>
+        <span>follow-up${followUps === 1 ? "" : "s"} required</span>
+      </div>
+    `;
+
+    if (!records.length) {
+      els.gradeBoardGrid.innerHTML = `
+        <div class="grade-board-empty">
+          <h3>No fictional grade scenario is loaded</h3>
+          <p>Load the conference scenario to see how authorized inspection ratings could appear in a clear mobile view.</p>
+        </div>
+      `;
+      els.gradeBoardUpdated.textContent = "";
+      return;
+    }
+
+    els.gradeBoardGrid.innerHTML = records.map(record => {
+      const grade = tsfcLetterGrade(record.rating);
+      const due = calculateMilsansDue(record, asOfDate);
+      const totalCos = record.criticalCos + record.nonCriticalCos;
+      const attention = record.imminentHealthHazard
+        ? "Immediate attention"
+        : record.followUpRequired
+          ? "Follow-up required"
+          : (["C", "F"].includes(grade) ? "Corrective action" : "Routine monitoring");
+
+      return `
+        <article class="grade-board-card grade-${grade.toLowerCase()}">
+          <div class="grade-board-card-heading">
+            <span class="grade-board-letter" aria-label="Letter grade equivalent ${grade}">${grade}</span>
+            <div>
+              <h3>${escapeHtml(record.facilityName)}</h3>
+              <p>${escapeHtml(record.installation || "Example installation")}${record.buildingNumber ? ` · Bldg ${escapeHtml(record.buildingNumber)}` : ""}</p>
+            </div>
+          </div>
+          <dl class="grade-board-details">
+            <div><dt>Official rating</dt><dd>${escapeHtml(record.rating)}</dd></div>
+            <div><dt>Last inspection</dt><dd>${formatDate(parseISO(record.inspectionDate))}</dd></div>
+            <div><dt>Current status</dt><dd>${attention}</dd></div>
+            <div><dt>Due status</dt><dd>${milsansDueStatusBadge(due.status)}</dd></div>
+            <div><dt>Corrected onsite</dt><dd>${totalCos}</dd></div>
+            <div><dt>Source record</dt><dd>${escapeHtml(record.surveyId || "Fictional demo")}</dd></div>
+          </dl>
+        </article>
+      `;
+    }).join("");
+
+    els.gradeBoardUpdated.textContent = `Fictional scenario • ${records.length} completed facility ratings • status calculated as of ${formatDate(asOfDate)}`;
   }
 
 
@@ -1804,6 +2376,7 @@
   }
 
   function exportMilsansCsv() {
+    if (!confirmPlaintextOutput("Exporting creates an unencrypted CSV outside Sentinel. Continue only if the destination and handling are approved.")) return;
     const headers = [
       "Survey ID", "Last Inspector", "Assigned Team", "DOEHRS Record Created By", "Installation", "Facility",
       "Last Inspection Date", "Survey Status", "Overall Inspection Rating", "TSFC Letter Grade Equivalent",
@@ -1864,7 +2437,7 @@
     if (!file) return;
 
     try {
-      const rows = parseCsv(await file.text());
+      const rows = parseCsv(await readCsvFile(file));
       const headerIndex = rows.findIndex(row => {
         const normalized = row.map(value => normalizeHeader(value));
         return normalized.includes("facility")
@@ -1907,6 +2480,9 @@
             installation,
             inspectedDate
           });
+          if (grouped.size > MAX_IMPORTED_RECORDS) {
+            throw new Error(`The file contains more than ${MAX_IMPORTED_RECORDS.toLocaleString()} unique facilities.`);
+          }
         }
       });
 
@@ -1946,6 +2522,7 @@
       });
 
       state = {
+        schemaVersion: 1,
         facilities: importedFacilities,
         customHolidays: state.customHolidays || [],
         milsansInspections: state.milsansInspections || [],
@@ -1980,7 +2557,7 @@
     }
 
     try {
-      const rows = parseCsv(await file.text());
+      const rows = parseCsv(await readCsvFile(file));
       const headerIndex = rows.findIndex(row => {
         const normalized = row.map(value => normalizeHeader(value));
         return normalized.includes("facility")
@@ -2021,6 +2598,9 @@
 
       if (!records.length) {
         throw new Error("No inaccessible facility records were found.");
+      }
+      if (records.length > MAX_IMPORTED_RECORDS) {
+        throw new Error(`The file contains more than ${MAX_IMPORTED_RECORDS.toLocaleString()} inaccessible-facility records.`);
       }
 
       if (!confirm(
@@ -2187,42 +2767,43 @@
   }
 
   function parseCsv(text) {
-    const rows = [];
-    let row = [];
-    let field = "";
-    let inQuotes = false;
-
-    for (let index = 0; index < text.length; index += 1) {
-      const char = text[index];
-      const next = text[index + 1];
-
-      if (char === '"' && inQuotes && next === '"') {
-        field += '"';
-        index += 1;
-      } else if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === "," && !inQuotes) {
-        row.push(field);
-        field = "";
-      } else if ((char === "\n" || char === "\r") && !inQuotes) {
-        if (char === "\r" && next === "\n") index += 1;
-        row.push(field);
-        if (row.some(value => value !== "")) rows.push(row);
-        row = [];
-        field = "";
-      } else {
-        field += char;
-      }
-    }
-
-    row.push(field);
-    if (row.some(value => value !== "")) rows.push(row);
-    return rows;
+    return window.SentinelCsv.parseCsv(text);
   }
 
-  function exportJson() {
-    downloadFile(`sentinel-tracker-backup-${toISO(new Date())}.json`, JSON.stringify(state, null, 2), "application/json");
-    showToast("JSON backup created.");
+  async function readCsvFile(file) {
+    validateImportFile(file, [".csv"]);
+    const text = await file.text();
+    if (text.includes("\u0000")) throw new Error("Binary or null-byte content is not allowed in a CSV file.");
+    return text;
+  }
+
+  function validateImportFile(file, allowedExtensions) {
+    if (!file || file.size === 0) throw new Error("The selected file is empty.");
+    if (file.size > MAX_IMPORT_BYTES) {
+      throw new Error(`The selected file exceeds the ${MAX_IMPORT_BYTES / (1024 * 1024)} MB interim safety limit.`);
+    }
+    if (file.name.length > 180 || /[\u0000-\u001f\u007f]/.test(file.name)) {
+      throw new Error("The selected filename is invalid.");
+    }
+    const lowerName = file.name.toLowerCase();
+    if (!allowedExtensions.some(extension => lowerName.endsWith(extension))) {
+      throw new Error(`Allowed file types: ${allowedExtensions.join(", ")}.`);
+    }
+  }
+
+  async function exportJson() {
+    try {
+      await saveQueue;
+      const backup = vault.exportEnvelope();
+      downloadFile(
+        `sentinel-encrypted-backup-${toISO(new Date())}.sentinel`,
+        JSON.stringify(backup),
+        "application/json"
+      );
+      showToast("Encrypted backup created. Keep the passphrase separately.");
+    } catch (error) {
+      alert(`Could not create encrypted backup: ${error.message}`);
+    }
   }
 
   async function importJson(event) {
@@ -2230,29 +2811,87 @@
     event.target.value = "";
     if (!file) return;
     try {
+      validateImportFile(file, [".sentinel", ".json"]);
       const parsed = JSON.parse(await file.text());
-      if (!parsed || !Array.isArray(parsed.facilities) || !Array.isArray(parsed.customHolidays)) throw new Error("Invalid backup structure.");
-      if (!confirm("Restore this backup and replace current browser data?")) return;
-      state = {
-        facilities: parsed.facilities.map(withAccessDefaults),
-        customHolidays: parsed.customHolidays,
-        milsansInspections: Array.isArray(parsed.milsansInspections)
-          ? parsed.milsansInspections.map(withMilsansDefaults)
-          : [],
-        audit: Array.isArray(parsed.audit) ? parsed.audit : []
-      };
-      saveState();
-      renderAll();
-      showToast("Backup restored.");
+      window.SentinelVault.validateEnvelope(parsed?.envelope || parsed);
+      pendingBackup = parsed;
+      els.restoreBackupError.textContent = "";
+      els.restoreBackupPassphrase.value = "";
+      els.restoreBackupDialog.showModal();
+      window.setTimeout(() => els.restoreBackupPassphrase.focus(), 0);
     } catch (error) {
-      alert(`Could not restore backup: ${error.message}`);
+      alert(`Could not restore encrypted backup: ${error.message}`);
+    }
+  }
+
+  function closeRestoreBackupDialog() {
+    pendingBackup = null;
+    els.restoreBackupPassphrase.value = "";
+    els.restoreBackupError.textContent = "";
+    if (els.restoreBackupDialog.open) els.restoreBackupDialog.close();
+  }
+
+  async function confirmRestoreBackup(event) {
+    event.preventDefault();
+    if (!pendingBackup) return;
+    const passphrase = els.restoreBackupPassphrase.value;
+    els.confirmRestoreBackupBtn.disabled = true;
+    els.restoreBackupError.textContent = "";
+    const storageKey = window.SentinelVault.constants.VAULT_KEY;
+    let previousRaw = null;
+    let envelopeReplaced = false;
+
+    try {
+      const candidateState = normalizePersistedState(await vault.decryptBackup(passphrase, pendingBackup));
+      await saveQueue;
+      previousRaw = localStorage.getItem(storageKey);
+      const backupToRestore = pendingBackup;
+      vault.importEnvelope(backupToRestore);
+      envelopeReplaced = true;
+      const restoredState = normalizePersistedState(await vault.unlock(passphrase));
+      if (JSON.stringify(candidateState) !== JSON.stringify(restoredState)) {
+        throw new Error("The backup changed during validation.");
+      }
+      closeRestoreBackupDialog();
+      unlockApplication(restoredState);
+      showToast("Encrypted backup verified and restored.");
+    } catch (error) {
+      if (envelopeReplaced) {
+        if (previousRaw !== null) localStorage.setItem(storageKey, previousRaw);
+        else localStorage.removeItem(storageKey);
+        closeRestoreBackupDialog();
+        await lockApplication(`Backup restore failed safely. Unlock the current vault to continue. ${error.message}`);
+      } else {
+        els.restoreBackupError.textContent = `Backup was not restored. ${error.message}`;
+        els.restoreBackupPassphrase.select();
+      }
+    } finally {
+      els.confirmRestoreBackupBtn.disabled = false;
     }
   }
 
 
+  function printGradeBoard() {
+    const cards = els.gradeBoardGrid.querySelectorAll(".grade-board-card");
+    if (!cards.length) {
+      showToast("Load a fictional scenario or authorized records before printing the Grade Board.");
+      return;
+    }
+    if (!conferenceDemoMode && !confirmPlaintextOutput("Printing can expose unencrypted record contents to printers, print services, files, and bystanders. Continue only with an approved destination.")) return;
+    els.printTitle.textContent = "Sentinel DFAC Inspection Letter Grade Board";
+    els.printSummary.textContent = conferenceDemoMode
+      ? "Fictional conference scenario - not authoritative"
+      : `Current view as of ${formatDate(asOfDate)} - verify against the source inspection record`;
+    document.body.classList.add("printing-grade-board");
+    const cleanup = () => document.body.classList.remove("printing-grade-board");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+  }
+
   function printFparCards() {
     const rows = [...els.trackerTableBody.querySelectorAll(".inspection-row")];
     if (!rows.length) { showToast("No visible FPAR facility cards are available to print."); return; }
+    if (!confirmPlaintextOutput("Printing can expose unencrypted record contents to printers, print services, files, and bystanders. Continue only with an approved destination.")) return;
     const inaccessible = rows.filter(row => row.dataset.inaccessible === "true").length;
     const status = els.statusFilter.options[els.statusFilter.selectedIndex]?.text || "All statuses";
     const sort = els.sortMode.options[els.sortMode.selectedIndex]?.text || "Current order";
@@ -2262,6 +2901,7 @@
   function printMilsansCards() {
     const rows = [...els.milsansDueTableBody.querySelectorAll(".milsans-due-row")];
     if (!rows.length) { showToast("No visible MILSANS facility cards are available to print."); return; }
+    if (!confirmPlaintextOutput("Printing can expose unencrypted record contents to printers, print services, files, and bystanders. Continue only with an approved destination.")) return;
     const status = els.milsansDueStatusFilter.options[els.milsansDueStatusFilter.selectedIndex]?.text || "All due statuses";
     const month = els.milsansDueMonthFilter.options[els.milsansDueMonthFilter.selectedIndex]?.text || "All scheduled months";
     const inspector = els.milsansDueInspectorFilter.options[els.milsansDueInspectorFilter.selectedIndex]?.text || "All inspectors";
@@ -2283,6 +2923,7 @@
 
 
   function exportCsv() {
+    if (!confirmPlaintextOutput("Exporting creates an unencrypted CSV outside Sentinel. Continue only if the destination and handling are approved.")) return;
     const headers = ["Facility", "Building Number", "Installation", "Agency", "Assigned Inspector", "Frequency", "Last Inspected", "Due Date", "Days to Due", "Status", "Accessibility", "Inaccessibility Reason", "Inaccessibility Date"];
     const rows = state.facilities
       .filter(f => f.active)
@@ -2317,7 +2958,35 @@
 
   function addAudit(action, entityId, previous, next) {
     state.audit = state.audit || [];
-    state.audit.push({ id: crypto.randomUUID(), action, entityId, previous, next, timestamp: new Date().toISOString() });
+    const previousObject = previous && typeof previous === "object" ? previous : {};
+    const nextObject = next && typeof next === "object" ? next : {};
+    const changedFields = unique([...Object.keys(previousObject), ...Object.keys(nextObject)])
+      .filter(key => JSON.stringify(previousObject[key]) !== JSON.stringify(nextObject[key]))
+      .slice(0, 30);
+    state.audit.push({
+      id: crypto.randomUUID(),
+      action: boundedString(action, "Audit action", 80, true),
+      entityId: boundedString(entityId, "Audit entity", 100),
+      changedFields,
+      details: summarizeAuditDetails(nextObject),
+      timestamp: new Date().toISOString()
+    });
+    state.audit = state.audit.slice(-MAX_AUDIT_EVENTS);
+  }
+
+  function summarizeAuditDetails(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    const allowed = new Set([
+      "recordsLoaded", "recordsImported", "facilitiesImported", "datedRowsConsidered",
+      "recordsRead", "facilitiesMatched", "unmatchedFacilities", "latestCompletedRule",
+      "dateSelectionRule", "importedAt", "loadedAt"
+    ]);
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key, item]) => allowed.has(key) && ["string", "number", "boolean"].includes(typeof item))
+        .slice(0, 20)
+        .map(([key, item]) => [key, typeof item === "string" ? item.slice(0, 200) : item])
+    );
   }
 
   function downloadFile(filename, content, type) {
@@ -2330,6 +2999,10 @@
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+  }
+
+  function confirmPlaintextOutput(message) {
+    return confirm(`${message}\n\nThis interim encryption protects Sentinel's local vault only. It does not encrypt exported CSV files, printed pages, screenshots, or the original files you imported.`);
   }
 
 
@@ -2423,7 +3096,11 @@
     return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
   }
   function escapeAttr(value) { return escapeHtml(value); }
-  function csvEscape(value) { return `"${String(value ?? "").replace(/"/g, '""')}"`; }
+  function csvEscape(value) {
+    let safeValue = String(value ?? "");
+    if (/^[\t\r\n ]*[=+\-@]/.test(safeValue)) safeValue = `'${safeValue}`;
+    return `"${safeValue.replace(/"/g, '""')}"`;
+  }
 
 
   function scrollPageToTop() {
@@ -2472,4 +3149,6 @@
     parseISO, toISO, addCalendarMonths, calculateNextDue, businessDayDifference,
     getFederalHolidays, isBusinessDay, nextBusinessDayAfter
   };
+  window.SentinelDemoLogic = { normalizeMilsansRating, tsfcLetterGrade };
+  window.SentinelSecurityLogic = { normalizePersistedState };
 })();

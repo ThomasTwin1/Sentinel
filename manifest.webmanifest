@@ -1,7 +1,7 @@
 {
-  "name": "Sentinel Facility Due-Date Tracker",
-  "short_name": "Sentinel",
-  "description": "A portfolio prototype for tracking food facility inspection due dates.",
+  "name": "Sentinel Secure Conference Prototype",
+  "short_name": "Sentinel Secure",
+  "description": "A secure interim tracker with encrypted local storage and a fictional DFAC Grade Board conference demo.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -4,6 +4,7 @@
 *.xlsx
 *.xls
 *.pdf
+*.sentinel
 
 # Only explicitly fictional CSV fixtures are allowed.
 !Sentinel_Fictional_*.csv
@@ -19,5 +20,6 @@ __MACOSX/
 
 # Sentinel browser backups and exports.
 sentinel-tracker-backup-*
+sentinel-encrypted-backup-*
 sentinel-inspection-readiness-*
 sentinel-milsans-*
