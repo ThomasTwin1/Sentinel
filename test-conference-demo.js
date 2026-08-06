@@ -20,6 +20,12 @@ assert.match(app, /if \(conferenceDemoMode\) return;/, "fictional conference mod
 assert.match(app, /setImportControlsDisabled\(true\)/, "conference mode must disable file imports");
 assert.match(app, /switchTab\("grade-board"\)/);
 assert.match(app, /function renderGradeBoard\(\)/);
+assert.match(app, /data-open-grade-facility/, "each DFAC letter grade must expose a details action");
+const gradeNavigationBlock = app.match(/function openGradeBoardFacility[\s\S]*?\n  }/)?.[0] || "";
+assert.match(gradeNavigationBlock, /switchTab\("milsans"\)/, "grade actions must open the detailed MILSANS results panel");
+assert.match(gradeNavigationBlock, /els\.milsansSearch\.value = searchValue/, "grade actions must select the matching inspection record");
+assert.match(gradeNavigationBlock, /scrollToFirstMilsansRecord\(\)/, "grade actions must position the matching record for the user");
+assert.doesNotMatch(gradeNavigationBlock, /https?:|window\.open/, "grade actions must not disclose facility data to an external service");
 
 const fictionalRecordBlock = app.match(/function buildFictionalMilsansRecords[\s\S]*?return records\.map/)?.[0] || "";
 assert.match(fictionalRecordBlock, /Example Installation/);
@@ -27,6 +33,7 @@ assert.match(fictionalRecordBlock, /Dining Facility/);
 assert.doesNotMatch(fictionalRecordBlock, /Camp Humphreys|Fort Liberty|JBLM|Fort Johnson/i);
 
 assert.match(styles, /\.grade-board-grid/);
+assert.match(styles, /\.grade-board-letter:focus-visible/, "clickable grades must show a keyboard focus indicator");
 assert.match(styles, /@media \(max-width: 760px\)[\s\S]*\.grade-board-grid \{ grid-template-columns: 1fr; \}/);
 
 console.log("Conference demo policy tests passed.");

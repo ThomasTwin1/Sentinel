@@ -1,6 +1,6 @@
 # Sentinel
 
-> **Secure conference prototype (v0.6.1):** This branch combines a passphrase-encrypted local vault with an in-memory, fictional DFAC Grade Board for phone and conference demonstrations. It adds transactional backup verification, immediate background privacy locking, bounded imports with common CSV quote compatibility, and safe service-worker upgrades. It is **not** an approved Army information system and does not authorize CUI, PII, classified, or operational data. See [INTERIM_SECURITY.md](INTERIM_SECURITY.md).
+> **Secure conference prototype (v0.6.2):** This branch combines a passphrase-encrypted local vault with an in-memory, fictional DFAC Grade Board for phone and conference demonstrations. Letter grades now open the matching DFAC inspection details inside Sentinel. It also includes transactional backup verification, immediate background privacy locking, bounded imports with common CSV quote compatibility, and safe service-worker upgrades. It is **not** an approved Army information system and does not authorize CUI, PII, classified, or operational data. See [INTERIM_SECURITY.md](INTERIM_SECURITY.md).
 
 **Protecting Soldiers Through Smarter Food Protection.**
 
@@ -220,7 +220,7 @@ Sentinel should be measured by its ability to improve outcomes such as:
 
 ## Current Status
 
-Sentinel now includes a dependency-free browser prototype for FPAR and MILSANS inspection tracking. The current v0.6.1 build supports separate dashboards, a fictional DFAC letter-grade conference view, bounded local CSV imports, due-date and missed-history calculations, inaccessible-facility tracking, printable facility cards and Grade Board, and encrypted browser-local backups.
+Sentinel now includes a dependency-free browser prototype for FPAR and MILSANS inspection tracking. The current v0.6.2 build supports separate dashboards, a fictional DFAC letter-grade conference view with direct internal links to each facility's inspection details, bounded local CSV imports, due-date and missed-history calculations, inaccessible-facility tracking, printable facility cards and Grade Board, and encrypted browser-local backups.
 
 See [TRACKER_README.md](TRACKER_README.md) for feature details and test commands. Public testing must use fictional fixtures. Authorized operational-data evaluation must use a downloaded local copy and follow [LOCAL_REAL_DATA_TESTING.md](LOCAL_REAL_DATA_TESTING.md); real exports must never be uploaded or committed to this public repository.
 
