@@ -8,7 +8,6 @@
 
 # Only explicitly fictional CSV fixtures are allowed.
 !Sentinel_Fictional_*.csv
-!VSIMS/Fake FPARS/Sentinel_Fictional_*.csv
 
 # Known local export/reference locations.
 Milsans/
