@@ -4,6 +4,8 @@
 
 **Protecting Soldiers Through Smarter Food Protection.**
 
+[Live fictional demo](https://thomastwin1.github.io/Sentinel/) · [Feature and test guide](TRACKER_README.md) · [Interim security boundary](INTERIM_SECURITY.md) · [Local data rules](LOCAL_REAL_DATA_TESTING.md) · [Security reporting](SECURITY.md)
+
 Sentinel is an AI-powered **Army Veterinary Services Operations Suite** focused on food protection, food inspections, food defense, foodborne illness investigations, and operational readiness.
 
 The project is designed to support Army Veterinary Services personnel and partner public health teams by improving inspection workflows, strengthening documentation, accelerating investigation support, and giving leaders clearer visibility into food safety risk across operational environments.

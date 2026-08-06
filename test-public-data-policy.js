@@ -14,8 +14,7 @@ const trackedFiles = execFileSync(
   .map(path => path.replace(/\\/g, "/"));
 
 const allowedCsv = [
-  /^Sentinel_Fictional_[^/]+\.csv$/i,
-  /^VSIMS\/Fake FPARS\/Sentinel_Fictional_[^/]+\.csv$/i
+  /^Sentinel_Fictional_[^/]+\.csv$/i
 ];
 
 const forbidden = trackedFiles.filter(path => {
