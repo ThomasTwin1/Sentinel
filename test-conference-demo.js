@@ -1,0 +1,32 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+
+const app = fs.readFileSync("app.js", "utf8");
+const html = fs.readFileSync("index.html", "utf8");
+const styles = fs.readFileSync("styles.css", "utf8");
+
+assert.match(html, /data-tab="grade-board"/);
+assert.match(html, /DFAC Inspection Letter Grade Board/);
+assert.match(html, /Prototype visualization:/);
+assert.match(html, /authoritative result remains the completed inspection record/i);
+assert.match(html, /Open fictional conference demo/);
+
+assert.match(app, /function startConferenceDemoMode\(\)/);
+assert.match(app, /conferenceDemoMode = true/);
+assert.match(app, /state = buildFictionalDemoState/);
+assert.match(app, /if \(conferenceDemoMode\) return;/, "fictional conference mode must not persist application state");
+assert.match(app, /setImportControlsDisabled\(true\)/, "conference mode must disable file imports");
+assert.match(app, /switchTab\("grade-board"\)/);
+assert.match(app, /function renderGradeBoard\(\)/);
+
+const fictionalRecordBlock = app.match(/function buildFictionalMilsansRecords[\s\S]*?return records\.map/)?.[0] || "";
+assert.match(fictionalRecordBlock, /Example Installation/);
+assert.match(fictionalRecordBlock, /Dining Facility/);
+assert.doesNotMatch(fictionalRecordBlock, /Camp Humphreys|Fort Liberty|JBLM|Fort Johnson/i);
+
+assert.match(styles, /\.grade-board-grid/);
+assert.match(styles, /@media \(max-width: 760px\)[\s\S]*\.grade-board-grid \{ grid-template-columns: 1fr; \}/);
+
+console.log("Conference demo policy tests passed.");

@@ -3,23 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; worker-src 'self'; manifest-src 'self'" />
   <meta name="theme-color" content="#183b2b" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Sentinel Tracker" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <title>Sentinel Upcoming Inspection Tracker v0.5.0</title>
+  <title>Sentinel Secure Conference Prototype v0.6.0</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div id="privacyShield" class="privacy-shield" aria-hidden="true" hidden>
+    <div>
+      <p class="eyebrow">SENTINEL PROTECTED</p>
+      <strong>Content hidden</strong>
+    </div>
+  </div>
+
+  <section id="securityGate" class="security-gate" role="dialog" aria-modal="true" aria-labelledby="securityGateTitle">
+    <form id="securityForm" class="security-gate-card">
+      <p class="eyebrow">INTERIM LOCAL PROTECTION</p>
+      <h1 id="securityGateTitle">Unlock Sentinel</h1>
+      <p id="securityGateDescription">Enter the passphrase for the encrypted vault stored on this device.</p>
+      <div id="securityLegacyNotice" class="security-legacy-notice" hidden>
+        Older plaintext browser data was found. It will be encrypted and the plaintext copy removed only after vault setup succeeds.
+      </div>
+      <label for="securityPassphrase">Passphrase</label>
+      <input id="securityPassphrase" type="password" minlength="14" autocomplete="current-password" required />
+      <div id="securityConfirmRow">
+        <label for="securityPassphraseConfirm">Confirm passphrase</label>
+        <input id="securityPassphraseConfirm" type="password" minlength="14" autocomplete="new-password" />
+      </div>
+      <p class="security-passphrase-note">Use at least 14 characters. There is no passphrase recovery. Do not reuse your Army or personal password.</p>
+      <p id="securityError" class="security-error" role="alert" aria-live="assertive"></p>
+      <button id="securitySubmitBtn" class="button primary" type="submit">Unlock</button>
+      <button id="openDemoModeBtn" class="button secondary" type="button">Open fictional conference demo (no save)</button>
+      <button id="deleteVaultBtn" class="button danger" type="button">Delete encrypted data on this device</button>
+      <div class="security-limitations">
+        <strong>Important:</strong> This interim edition encrypts local storage but is not Army-authorized hosting and does not provide CAC/PIV, central permissions, or enterprise audit. Do not use it for CUI, PII, classified, or operational records without written approval.
+      </div>
+    </form>
+  </section>
+
   <header class="app-header">
     <div>
-      <p class="eyebrow">SENTINEL PROTOTYPE</p>
+      <p class="eyebrow">SENTINEL INTERIM ENCRYPTED EDITION</p>
       <h1>Upcoming Food Inspection Tracker</h1>
       <p class="subtitle">See what is due before it becomes overdue.</p>
     </div>
     <div class="header-actions">
+      <span id="vaultStatus" class="vault-status">Locked</span>
+      <button id="lockBtn" class="button secondary" type="button">Lock</button>
+      <button id="loadConferenceDemoBtn" class="button primary" type="button">Conference Demo</button>
       <button id="loadDemoBtn" class="button secondary">Load Demo Data</button>
       <label class="button secondary file-label">
         Import FPAR CSV
@@ -37,19 +75,20 @@
       <button id="exportMilsansCsvTopBtn" class="button secondary">Export MILSANS CSV</button>
       <button id="printFparCardsBtn" class="button secondary">Print FPAR Cards</button>
       <button id="printMilsansCardsBtn" class="button secondary">Print MILSANS Cards</button>
-      <button id="exportJsonBtn" class="button secondary">Backup JSON</button>
+      <button id="exportJsonBtn" class="button secondary">Encrypted Backup</button>
       <label class="button secondary file-label">
-        Restore JSON
-        <input id="importJsonInput" type="file" accept="application/json" hidden />
+        Restore Encrypted Backup
+        <input id="importJsonInput" type="file" accept="application/json,.sentinel" hidden />
       </label>
     </div>
   </header>
 
   <div class="security-banner">
-    <strong>Public hosted copy:</strong> Use fictional or sanitized records only. Authorized real-data testing must use a downloaded local copy on an approved device; never commit or upload operational exports to GitHub.
+    <strong>Interim protection only:</strong> Records are encrypted at rest on this device and auto-lock after inactivity. This is not approved hosting or enterprise authentication. Use fictional data unless your information owner and security office provide written authorization.
   </div>
 
   <nav class="tabs" aria-label="Tracker sections">
+    <button class="tab" data-tab="grade-board">DFAC Grade Board</button>
     <button class="tab active" data-tab="fpar-dashboard">FPAR Dashboard</button>
     <button class="tab" data-tab="milsans-dashboard">MILSANS Dashboard</button>
     <button class="tab" data-tab="calendar">Business Calendar</button>
@@ -61,6 +100,28 @@
       <h1 id="printTitle">Sentinel Facility Cards</h1>
       <p id="printSummary"></p>
       <p class="print-warning">Prototype output - verify against the source system before action.</p>
+    </section>
+
+    <section id="grade-board" class="tab-panel">
+      <div class="grade-board-hero">
+        <div>
+          <p class="eyebrow">FICTIONAL COMMAND VIEW</p>
+          <h2>DFAC Inspection Letter Grade Board</h2>
+          <p>Translate the latest completed inspection rating into an at-a-glance A, B, C, or F equivalent while preserving the underlying compliance category and required follow-up.</p>
+        </div>
+        <div class="grade-board-actions">
+          <button id="gradeBoardLoadDemoBtn" class="button primary" type="button">Load Fictional Scenario</button>
+          <button id="printGradeBoardBtn" class="button secondary" type="button">Print Grade Board</button>
+        </div>
+      </div>
+
+      <div class="grade-board-disclaimer">
+        <strong>Prototype visualization:</strong> The authoritative result remains the completed inspection record. Sentinel displays a letter-grade equivalent for decision support; this demo uses fictional facilities and is not an Army-authorized system.
+      </div>
+
+      <div id="gradeBoardSummary" class="grade-board-summary" aria-label="Fictional grade summary"></div>
+      <div id="gradeBoardGrid" class="grade-board-grid"></div>
+      <p id="gradeBoardUpdated" class="grade-board-updated"></p>
     </section>
 
     <section id="fpar-dashboard" class="tab-panel active">
@@ -634,7 +695,7 @@
           <li><strong>Scheduled Date:</strong> Confirm a required follow-up date takes priority; otherwise Scheduled Date is the 25th of the scheduled month.</li>
           <li><strong>Missed Month:</strong> Confirm missed facilities display the exact 25th of the month in which the required monthly or quarterly inspection was due.</li>
           <li><strong>TSFC letter grades:</strong> Confirm Fully=A, Substantially=B, Partially=C, and Noncompliant=F. Confirm no D grade appears.</li>
-          <li><strong>Backup and restore:</strong> Export JSON, delete or change a record, then restore the file.</li>
+          <li><strong>Backup and restore:</strong> Export an encrypted <code>.sentinel</code> backup, delete or change a record, then verify and restore the file with its passphrase.</li>
         </ol>
         <div class="callout">
           <strong>Document defects in GitHub:</strong> Record the test setup, expected result, actual result, screenshots, and the decision made after testing.
@@ -663,18 +724,31 @@
     </form>
   </dialog>
 
+  <dialog id="restoreBackupDialog">
+    <form id="restoreBackupForm">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">VERIFY BEFORE REPLACE</p>
+          <h2>Restore Encrypted Backup</h2>
+        </div>
+        <button id="closeRestoreBackupDialog" class="icon-button" type="button" aria-label="Close">×</button>
+      </div>
+      <p>Enter the passphrase used for this backup. Sentinel will decrypt and validate it before replacing the current local vault.</p>
+      <label for="restoreBackupPassphrase">Backup passphrase</label>
+      <input id="restoreBackupPassphrase" type="password" minlength="14" autocomplete="current-password" required />
+      <p id="restoreBackupError" class="security-error" role="alert" aria-live="assertive"></p>
+      <div class="dialog-actions">
+        <button id="cancelRestoreBackupBtn" class="button secondary" type="button">Cancel</button>
+        <button id="confirmRestoreBackupBtn" class="button primary" type="submit">Verify and Restore</button>
+      </div>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <script src="csv-security.js"></script>
+  <script src="secure-vault.js"></script>
   <script src="app.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("service-worker.js").catch((error) => {
-          console.warn("Service worker registration failed:", error);
-        });
-      });
-    }
-  </script>
 
   <nav id="quickScrollControls" class="quick-scroll-controls" aria-label="Quick page navigation">
     <button

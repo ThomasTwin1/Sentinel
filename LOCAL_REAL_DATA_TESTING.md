@@ -1,17 +1,14 @@
-# Local Real-Data Testing
+# Local Data-Handling Warning
 
 Sentinel's public GitHub repository and GitHub Pages site are for source code and fictional test data only. Real facility schedules, inspection exports, names, contact information, CUI, credentials, and other operational data must never be committed, attached to an issue, pasted into a pull request, or uploaded to GitHub.
 
-## Authorized local workflow
+## Written approval is required
 
-1. Download or clone Sentinel onto an authorized, organization-managed device.
-2. Keep operational CSV files outside the repository folder.
-3. Open `index.html` locally in Microsoft Edge, Chrome, or Firefox.
-4. Use **Import FPAR CSV**, **Import MILSANS CSV**, or **Import Inaccessible CSV** to select the local export.
-5. Validate counts, due dates, filters, and facility matches without taking screenshots that expose operational data.
-6. When testing is complete, export an authorized backup only if required, then clear Sentinel site data from the browser and securely remove unneeded downloads.
+The repository owner or application developer cannot independently authorize operational data in Sentinel. Before using anything except fictional data, obtain written direction covering the exact data, device, browser, hosting location, users, workflow, retention, exports, and incident-reporting path from the information owner and appropriate security office.
 
-CSV imports are processed in the browser. The application has no backend and does not transmit imported records, but the records persist in browser local storage and may appear in CSV/JSON downloads. Treat the device, browser profile, screenshots, printouts, and exports as sensitive.
+Version 0.6.0 encrypts application records before browser persistence and adds stricter validation and fail-closed lifecycle handling. This improves protection at rest but does not provide CAC/PIV, central permissions, enterprise audit, approved hosting, managed-device enforcement, or an authorization to operate. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) for the complete limitations.
+
+The original imported CSV, exported CSVs, printouts, PDFs, screenshots, and clipboard contents remain outside the encrypted vault and must be protected separately.
 
 ## Public testing
 
