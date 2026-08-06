@@ -1,8 +1,8 @@
-# Sentinel Facility Due-Date Tracker v0.6.0 Secure Conference Prototype
+# Sentinel Facility Due-Date Tracker v0.6.1 Secure Conference Prototype
 
-A dependency-free browser prototype for validating Sentinel's first MVP feature: showing which food facilities are overdue, due today, due soon, or upcoming. Version 0.6.0 adds a passphrase-encrypted local vault, fail-closed lifecycle locking, transactional encrypted-backup restore, bounded imports, and a fictional conference demo. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
+A dependency-free browser prototype for validating Sentinel's first MVP feature: showing which food facilities are overdue, due today, due soon, or upcoming. Version 0.6.1 adds a passphrase-encrypted local vault, fail-closed lifecycle locking, transactional encrypted-backup restore, bounded imports with common CSV quote compatibility, and a fictional conference demo. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
 
-## Working criteria in v0.6.0
+## Working criteria in v0.6.1
 
 - **Last Inspected** uses the latest inspection date listed for each facility.
 - Workflow status does not affect the countdown; Draft, Submitted, and Accepted rows are treated the same for date selection.
@@ -69,7 +69,7 @@ The tests cover monthly month-end behavior, weekly and quarterly calculations, s
 
 ## Architecture
 
-This v0.6.0 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. Application records are encrypted before being written to browser local storage, but decrypted data and the key exist in memory while Sentinel is unlocked. Shared team access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
+This v0.6.1 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. Application records are encrypted before being written to browser local storage, but decrypted data and the key exist in memory while Sentinel is unlocked. Shared team access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
 
 - v0.2.7 fixes the iPhone **Print Facility Cards** button so it correctly opens Safari's print sheet from the local Sentinel build.
 
@@ -263,7 +263,7 @@ Schedule-only rows are allowed when a facility has a due date but no completed r
 - Preserves Scheduled Date beside Assigned Team on screen and in printed cards.
 
 
-## v0.6.0 Quick Page Navigation
+## v0.6.1 Quick Page Navigation
 
 - Adds floating Up and Down arrow buttons to long pages.
 - Up returns to the top of the current page.
