@@ -9,6 +9,7 @@ const styles = fs.readFileSync("styles.css", "utf8");
 
 assert.match(html, /data-tab="grade-board"/);
 assert.match(html, /DFAC Inspection Letter Grade Board/);
+assert.match(html, /name="sentinel-release" content="0\.6\.2"/, "the deployed page must expose its release version");
 assert.match(html, /Prototype visualization:/);
 assert.match(html, /authoritative result remains the completed inspection record/i);
 assert.match(html, /Open fictional conference demo/);
