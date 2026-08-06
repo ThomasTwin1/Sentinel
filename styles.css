@@ -231,13 +231,31 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
 }
 
 .grade-board-stat {
+  width: 100%;
+  appearance: none;
   min-height: 112px;
   padding: 16px;
   border: 1px solid var(--border);
   border-top: 6px solid #7a8580;
   border-radius: 10px;
   background: white;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.grade-board-stat:hover { transform: translateY(-2px); }
+.grade-board-stat:active { transform: translateY(0); }
+.grade-board-stat:focus-visible {
+  outline: 4px solid rgba(36, 75, 53, 0.22);
+  outline-offset: 3px;
+}
+.grade-board-stat[aria-pressed="true"] {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(36, 75, 53, 0.16), var(--shadow);
 }
 
 .grade-board-stat strong {
@@ -251,6 +269,15 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
   margin-top: 10px;
   color: var(--text-muted);
   font-weight: 750;
+}
+
+.grade-board-stat .grade-board-filter-action {
+  margin-top: 8px;
+  color: var(--brand);
+  font-size: 0.76rem;
+  font-weight: 850;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .grade-board-stat.grade-a { border-top-color: #287347; }

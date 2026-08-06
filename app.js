@@ -24,6 +24,7 @@
   let pendingBackup = null;
   let failedUnlockAttempts = 0;
   let asOfDate = startOfDay(new Date());
+  let gradeBoardFilter = "";
   let toastTimer;
 
   const els = {};
@@ -147,6 +148,7 @@
     els.loadConferenceDemoBtn.addEventListener("click", loadConferenceDemo);
     els.gradeBoardLoadDemoBtn.addEventListener("click", loadConferenceDemo);
     els.printGradeBoardBtn.addEventListener("click", printGradeBoard);
+    els.gradeBoardSummary.addEventListener("click", handleGradeBoardSummaryClick);
     els.gradeBoardGrid.addEventListener("click", openGradeBoardFacility);
     els.deleteVaultBtn.addEventListener("click", deleteLocalVault);
     els.restoreBackupForm.addEventListener("submit", confirmRestoreBackup);
@@ -473,6 +475,7 @@
     vault?.lock();
     vaultUnlocked = false;
     conferenceDemoMode = true;
+    gradeBoardFilter = "";
     state = buildFictionalDemoState(startOfDay(new Date()));
     els.securityGate.hidden = true;
     setApplicationInert(false);
@@ -491,6 +494,7 @@
   function exitConferenceDemoMode(message = "Fictional demo closed.") {
     engagePrivacyShield();
     conferenceDemoMode = false;
+    gradeBoardFilter = "";
     state = emptyState();
     document.body.classList.remove("conference-demo-mode");
     setImportControlsDisabled(false);
@@ -1243,6 +1247,7 @@
   function loadConferenceDemo() {
     const hasData = state.facilities.length || state.milsansInspections?.length;
     if (!conferenceDemoMode && hasData && !confirm("Replace current local tracker data with the fictional conference scenario? Create an encrypted backup first if needed.")) return;
+    gradeBoardFilter = "";
     state = buildFictionalDemoState(startOfDay(new Date()));
     if (!conferenceDemoMode) {
       addAudit("FICTIONAL_CONFERENCE_DEMO_LOADED", crypto.randomUUID(), null, {
@@ -1554,7 +1559,7 @@
   function renderGradeBoard() {
     if (!els.gradeBoardGrid || !els.gradeBoardSummary) return;
 
-    const records = getMilsansDueRecords()
+    const allRecords = getMilsansDueRecords()
       .filter(record => record.surveyStatus === "Completed" && record.rating && record.inspectionDate)
       .sort((a, b) => {
         const rank = { F: 0, C: 1, B: 2, A: 3 };
@@ -1563,22 +1568,36 @@
       });
 
     const counts = { A: 0, B: 0, C: 0, F: 0 };
-    records.forEach(record => { counts[tsfcLetterGrade(record.rating)] += 1; });
-    const followUps = records.filter(record => record.followUpRequired).length;
+    allRecords.forEach(record => { counts[tsfcLetterGrade(record.rating)] += 1; });
+    const followUps = allRecords.filter(record => record.followUpRequired).length;
 
     els.gradeBoardSummary.innerHTML = ["A", "B", "C", "F"].map(grade => `
-      <div class="grade-board-stat grade-${grade.toLowerCase()}">
+      <button
+        type="button"
+        class="grade-board-stat grade-${grade.toLowerCase()}"
+        data-grade-board-filter="${grade}"
+        aria-pressed="${gradeBoardFilter === grade}"
+        aria-label="Show grade ${grade} facilities"
+      >
         <strong>${grade}</strong>
         <span>${counts[grade]} facilit${counts[grade] === 1 ? "y" : "ies"}</span>
-      </div>
+        <span class="grade-board-filter-action">${gradeBoardFilter === grade ? "Showing facilities" : "View facilities"}</span>
+      </button>
     `).join("") + `
-      <div class="grade-board-stat follow-up">
+      <button
+        type="button"
+        class="grade-board-stat follow-up"
+        data-grade-board-filter="FOLLOW_UP"
+        aria-pressed="${gradeBoardFilter === "FOLLOW_UP"}"
+        aria-label="Show facilities requiring follow-up"
+      >
         <strong>${followUps}</strong>
-        <span>follow-up${followUps === 1 ? "" : "s"} required</span>
-      </div>
+        <span>Follow-Up Required</span>
+        <span class="grade-board-filter-action">${gradeBoardFilter === "FOLLOW_UP" ? "Showing facilities" : "View facilities"}</span>
+      </button>
     `;
 
-    if (!records.length) {
+    if (!allRecords.length) {
       els.gradeBoardGrid.innerHTML = `
         <div class="grade-board-empty">
           <h3>No fictional grade scenario is loaded</h3>
@@ -1586,6 +1605,23 @@
         </div>
       `;
       els.gradeBoardUpdated.textContent = "";
+      return;
+    }
+
+    const records = allRecords.filter(record => {
+      if (!gradeBoardFilter) return true;
+      if (gradeBoardFilter === "FOLLOW_UP") return record.followUpRequired;
+      return tsfcLetterGrade(record.rating) === gradeBoardFilter;
+    });
+
+    if (!records.length) {
+      els.gradeBoardGrid.innerHTML = `
+        <div class="grade-board-empty">
+          <h3>No facilities match this grade filter</h3>
+          <p>Tap the selected summary tile again to show all completed facility ratings.</p>
+        </div>
+      `;
+      els.gradeBoardUpdated.textContent = `Showing 0 of ${allRecords.length} completed facility ratings`;
       return;
     }
 
@@ -1632,7 +1668,35 @@
       `;
     }).join("");
 
-    els.gradeBoardUpdated.textContent = `Fictional scenario • ${records.length} completed facility ratings • status calculated as of ${formatDate(asOfDate)}`;
+    const filterDescription = gradeBoardFilter === "FOLLOW_UP"
+      ? "follow-up required"
+      : gradeBoardFilter
+        ? `grade ${gradeBoardFilter}`
+        : "all grades";
+    els.gradeBoardUpdated.textContent = `Fictional scenario • showing ${records.length} of ${allRecords.length} completed facility ratings • ${filterDescription} • status calculated as of ${formatDate(asOfDate)}`;
+  }
+
+  function handleGradeBoardSummaryClick(event) {
+    const summaryButton = event.target.closest("[data-grade-board-filter]");
+    if (!summaryButton) return;
+
+    const selectedFilter = summaryButton.dataset.gradeBoardFilter || "";
+    gradeBoardFilter = gradeBoardFilter === selectedFilter ? "" : selectedFilter;
+    renderGradeBoard();
+    focusGradeBoardResults();
+    showToast(gradeBoardFilter
+      ? `Showing ${gradeBoardFilter === "FOLLOW_UP" ? "facilities requiring follow-up" : `grade ${gradeBoardFilter} facilities`}.`
+      : "Showing all DFAC grades.");
+  }
+
+  function focusGradeBoardResults() {
+    requestAnimationFrame(() => {
+      const firstResult = els.gradeBoardGrid.querySelector(".grade-board-card, .grade-board-empty");
+      if (!firstResult) return;
+      firstResult.setAttribute("tabindex", "-1");
+      firstResult.focus({ preventScroll: true });
+      firstResult.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function openGradeBoardFacility(event) {

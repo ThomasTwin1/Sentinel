@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "sentinel-tracker-";
-const CACHE_NAME = `${CACHE_PREFIX}v0.6.2-clickable-dfac-grades`;
+const CACHE_NAME = `${CACHE_PREFIX}v0.6.3-grade-board-filters`;
 const APP_SHELL = [
   "./",
   "./index.html",

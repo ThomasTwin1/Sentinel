@@ -6,7 +6,7 @@ Sentinel's public GitHub repository and GitHub Pages site are for source code an
 
 The repository owner or application developer cannot independently authorize operational data in Sentinel. Before using anything except fictional data, obtain written direction covering the exact data, device, browser, hosting location, users, workflow, retention, exports, and incident-reporting path from the information owner and appropriate security office.
 
-Version 0.6.2 encrypts application records before browser persistence and adds stricter validation, fail-closed lifecycle handling, compatibility with common bounded CSV quote variations, and internal DFAC-grade navigation that does not send facility searches to an external service. This improves protection at rest but does not provide CAC/PIV, central permissions, enterprise audit, approved hosting, managed-device enforcement, or an authorization to operate. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) for the complete limitations.
+Version 0.6.3 encrypts application records before browser persistence and adds stricter validation, fail-closed lifecycle handling, compatibility with common bounded CSV quote variations, internal DFAC-grade navigation, and local Grade Board filters that do not send facility searches to an external service. This improves protection at rest but does not provide CAC/PIV, central permissions, enterprise audit, approved hosting, managed-device enforcement, or an authorization to operate. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) for the complete limitations.
 
 The original imported CSV, exported CSVs, printouts, PDFs, screenshots, and clipboard contents remain outside the encrypted vault and must be protected separately.
 
