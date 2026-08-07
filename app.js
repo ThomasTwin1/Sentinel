@@ -5,7 +5,10 @@
   const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
   const MAX_IMPORTED_RECORDS = 2000;
   const MAX_AUDIT_EVENTS = 500;
+  const MAX_SCHEDULE_DAYS = 366;
+  const MAX_SCHEDULE_ROWS = 5000;
   const AUTO_LOCK_MS = 5 * 60 * 1000;
+  const SIGN_IN_DISABLED = true;
   const FREQUENCIES = {
     DAILY: { label: "Daily", dueSoon: 0 },
     WEEKLY: { label: "Weekly", dueSoon: 2 },
@@ -37,6 +40,8 @@
     document.body.classList.add("vault-locked");
     els.asOfDate.value = toISO(asOfDate);
     els.milsansAsOfDate.value = toISO(asOfDate);
+    els.scheduleStartDate.value = toISO(asOfDate);
+    els.scheduleEndDate.value = toISO(addDays(asOfDate, 89));
     registerServiceWorker();
     initializeSecurity();
   }
@@ -61,6 +66,7 @@
       "milsansSearch", "milsansRatingFilter", "milsansFollowUpFilter", "milsansDueStatusResultsFilter", "milsansMonthFilter", "milsansInspectorFilter", "milsansSortMode",
       "milsansSummaryCards", "milsansRatingKey", "milsansDescription", "milsansRecordCount", "milsansTableBody", "milsansResults",
       "milsansDueSummaryCards", "milsansDueRatingFilter", "milsansDueStatusFilter", "milsansDueMonthFilter", "milsansDueInspectorFilter", "milsansDueSortMode", "milsansDueDescription", "milsansDueRecordCount", "milsansDueTableBody", "milsansDueRequirements",
+      "scheduleStartDate", "scheduleEndDate", "scheduleSourceFilter", "scheduleSearch", "schedule30DaysBtn", "schedule90DaysBtn", "printInspectionScheduleBtn", "scheduleSummary", "scheduleDescription", "scheduleRecordCount", "scheduleTableBody",
       "quickScrollControls", "scrollToTopBtn", "scrollToBottomBtn", "toast"
       , "securityGate", "securityGateTitle", "securityGateDescription", "securityForm", "securityPassphrase", "securityConfirmRow", "securityPassphraseConfirm",
       "securityLegacyNotice", "securityError", "securitySubmitBtn", "openDemoModeBtn", "deleteVaultBtn", "lockBtn", "vaultStatus",
@@ -92,6 +98,13 @@
     [els.milsansDueRatingFilter, els.milsansDueStatusFilter, els.milsansDueMonthFilter, els.milsansDueInspectorFilter, els.milsansDueSortMode]
       .forEach(el => el.addEventListener("input", renderMilsansDueDashboard));
     els.milsansDueSummaryCards.addEventListener("click", handleMilsansDueCardClick);
+
+    [els.scheduleStartDate, els.scheduleEndDate, els.scheduleSourceFilter]
+      .forEach(el => el.addEventListener("input", renderInspectionSchedule));
+    els.scheduleSearch.addEventListener("input", renderInspectionSchedule);
+    els.schedule30DaysBtn.addEventListener("click", () => setScheduleWindow(30));
+    els.schedule90DaysBtn.addEventListener("click", () => setScheduleWindow(90));
+    els.printInspectionScheduleBtn.addEventListener("click", printInspectionSchedule);
 
     els.summaryCards.addEventListener("click", handleDashboardShortcutClick);
     els.statusKeyGrid.addEventListener("click", handleDashboardShortcutClick);
@@ -354,6 +367,12 @@
   async function initializeSecurity() {
     try {
       vault = new window.SentinelVault.SentinelVault();
+      if (SIGN_IN_DISABLED) {
+        const initialTab = initialTabFromHash();
+        startConferenceDemoMode();
+        switchTab(initialTab);
+        return;
+      }
       showSecurityGate(vault.hasVault() ? "unlock" : "setup");
     } catch (error) {
       els.securityGateTitle.textContent = "Secure storage unavailable";
@@ -481,17 +500,25 @@
     setApplicationInert(false);
     document.body.classList.remove("vault-locked");
     document.body.classList.add("conference-demo-mode");
-    els.vaultStatus.textContent = "Fictional demo • not saved";
-    els.lockBtn.textContent = "Exit Demo";
+    els.vaultStatus.textContent = SIGN_IN_DISABLED ? "No sign-in • fictional data" : "Fictional demo • not saved";
+    els.lockBtn.textContent = SIGN_IN_DISABLED ? "Reset Demo" : "Exit Demo";
     setImportControlsDisabled(true);
     renderAll();
     switchTab("grade-board");
     focusGradeBoard();
     releasePrivacyShield();
-    showToast("Fictional conference scenario loaded in memory only.");
+    showToast(SIGN_IN_DISABLED
+      ? "No-sign-in fictional test mode opened. Data is not saved."
+      : "Fictional conference scenario loaded in memory only.");
   }
 
   function exitConferenceDemoMode(message = "Fictional demo closed.") {
+    if (SIGN_IN_DISABLED) {
+      startConferenceDemoMode();
+      switchTab("fpar-dashboard");
+      showToast("Fictional test data reset.");
+      return;
+    }
     engagePrivacyShield();
     conferenceDemoMode = false;
     gradeBoardFilter = "";
@@ -635,10 +662,179 @@
     renderGradeBoard();
     renderDashboard();
     renderMilsansDueDashboard();
+    renderInspectionSchedule();
     renderFacilities();
     renderHolidays();
     renderMilsans();
     window.requestAnimationFrame(updateQuickScrollControls);
+  }
+
+  function setScheduleWindow(days) {
+    const start = parseISO(els.scheduleStartDate.value || toISO(asOfDate));
+    els.scheduleStartDate.value = toISO(start);
+    els.scheduleEndDate.value = toISO(addDays(start, days - 1));
+    renderInspectionSchedule();
+  }
+
+  function renderInspectionSchedule() {
+    if (!els.scheduleTableBody) return;
+
+    const startValue = els.scheduleStartDate.value;
+    const endValue = els.scheduleEndDate.value;
+    if (!startValue || !endValue) {
+      renderScheduleError("Choose both a schedule start date and end date.");
+      return;
+    }
+
+    const start = parseISO(startValue);
+    const end = parseISO(endValue);
+    const rangeDays = calendarDayDifference(start, end);
+    if (rangeDays < 0) {
+      renderScheduleError("The schedule end date must be on or after the start date.");
+      return;
+    }
+    if (rangeDays + 1 > MAX_SCHEDULE_DAYS) {
+      renderScheduleError(`Choose a schedule window of ${MAX_SCHEDULE_DAYS} days or fewer.`);
+      return;
+    }
+
+    const source = els.scheduleSourceFilter.value || "ALL";
+    const query = els.scheduleSearch.value.trim().toLowerCase();
+    const allRows = buildInspectionScheduleRows(start, end, source);
+    const rows = allRows.filter(row => !query || `${row.facility} ${row.buildingNumber} ${row.installation} ${row.program} ${row.owner} ${row.requirement} ${row.notes}`.toLowerCase().includes(query));
+    const fparCount = rows.filter(row => row.program === "FPAR").length;
+    const milsansCount = rows.filter(row => row.program === "MILSANS").length;
+
+    els.scheduleSummary.innerHTML = `
+      <div class="schedule-stat"><span>Total scheduled</span><strong>${rows.length}</strong></div>
+      <div class="schedule-stat fpar"><span>FPAR</span><strong>${fparCount}</strong></div>
+      <div class="schedule-stat milsans"><span>MILSANS</span><strong>${milsansCount}</strong></div>
+    `;
+    els.scheduleDescription.textContent = `${formatDate(start)} through ${formatDate(end)} • ${source === "ALL" ? "FPAR and MILSANS" : source}${query ? ` • search: ${query}` : ""}`;
+    els.scheduleRecordCount.textContent = `${rows.length} inspection${rows.length === 1 ? "" : "s"}`;
+
+    if (!rows.length) {
+      els.scheduleTableBody.innerHTML = `<tr><td class="empty-row" colspan="8">No inspections fall within this schedule window and filter.</td></tr>`;
+      return;
+    }
+
+    els.scheduleTableBody.innerHTML = rows.map(row => `
+      <tr class="schedule-row" data-program="${row.program.toLowerCase()}" data-date="${toISO(row.date)}">
+        <td class="schedule-date-cell" data-label="Inspection Date"><strong>${formatDate(row.date)}</strong><span>${formatWeekday(row.date)}</span></td>
+        <td data-label="Program"><span class="schedule-program ${row.program.toLowerCase()}">${row.program}</span></td>
+        <td class="schedule-facility-cell" data-label="Facility"><span class="table-primary">${escapeHtml(row.facility)}</span>${row.buildingNumber ? `<span class="table-secondary">Building ${escapeHtml(row.buildingNumber)}</span>` : ""}</td>
+        <td data-label="Installation">${escapeHtml(row.installation || "Not listed")}</td>
+        <td data-label="Inspector / Team">${escapeHtml(row.owner || "Unassigned")}</td>
+        <td data-label="Requirement">${escapeHtml(row.requirement)}</td>
+        <td data-label="Schedule Status">${scheduleStatusBadge(row.status)}</td>
+        <td data-label="Notes">${escapeHtml(row.notes || "—")}</td>
+      </tr>
+    `).join("");
+  }
+
+  function renderScheduleError(message) {
+    els.scheduleSummary.innerHTML = "";
+    els.scheduleDescription.textContent = message;
+    els.scheduleRecordCount.textContent = "0 inspections";
+    els.scheduleTableBody.innerHTML = `<tr><td class="empty-row" colspan="8">${escapeHtml(message)}</td></tr>`;
+  }
+
+  function buildInspectionScheduleRows(start, end, source = "ALL") {
+    const rows = [];
+    const includeFpar = source === "ALL" || source === "FPAR";
+    const includeMilsans = source === "ALL" || source === "MILSANS";
+
+    if (includeFpar) {
+      for (const facility of state.facilities.filter(item => item.active && item.lastConductedDate)) {
+        let due = calculateNextDue(parseISO(facility.lastConductedDate), facility.frequency, state.customHolidays);
+        due = firstOccurrenceOnOrAfter(due, facility.frequency, start, state.customHolidays);
+        while (due <= end && rows.length < MAX_SCHEDULE_ROWS) {
+          rows.push({
+            date: due,
+            program: "FPAR",
+            facility: facility.name,
+            buildingNumber: facility.buildingNumber || "",
+            installation: facility.installation || "",
+            owner: facility.assignedInspector || "Unassigned",
+            requirement: `${FREQUENCIES[facility.frequency]?.label || facility.frequency} inspection`,
+            status: scheduleStatusForDate(due),
+            notes: facility.inaccessible ? `Access restricted: ${facility.inaccessibilityReason || "reason not listed"}` : ""
+          });
+          due = calculateNextDue(due, facility.frequency, state.customHolidays);
+        }
+        if (rows.length >= MAX_SCHEDULE_ROWS) break;
+      }
+    }
+
+    if (includeMilsans && rows.length < MAX_SCHEDULE_ROWS) {
+      for (const record of getMilsansDueRecords()) {
+        const due = calculateMilsansDue(record, asOfDate);
+        const actionDate = record.followUpRequired && record.followUpDate
+          ? parseISO(record.followUpDate)
+          : calculateMilsansActionDate(record) || due.nextDue;
+        if (!actionDate || actionDate < start || actionDate > end) continue;
+        rows.push({
+          date: actionDate,
+          program: "MILSANS",
+          facility: record.facilityName,
+          buildingNumber: record.buildingNumber || "",
+          installation: record.installation || "",
+          owner: record.assignedTeam || record.inspector || "Unassigned",
+          requirement: record.followUpRequired ? "Required follow-up inspection" : `${normalizeMilsansFrequency(record.frequency) === "MONTHLY" ? "Monthly" : "Quarterly"} inspection`,
+          status: scheduleStatusForDate(actionDate),
+          notes: record.followUpRequired ? `Follow-up required${record.surveyId ? ` • ${record.surveyId}` : ""}` : (record.surveyId || "")
+        });
+        if (rows.length >= MAX_SCHEDULE_ROWS) break;
+      }
+    }
+
+    return rows.sort((a, b) => a.date - b.date
+      || a.program.localeCompare(b.program)
+      || a.facility.localeCompare(b.facility));
+  }
+
+  function firstOccurrenceOnOrAfter(nextDue, frequency, start, customHolidays) {
+    let due = startOfDay(nextDue);
+    if (due >= start) return due;
+
+    if (frequency === "DAILY") {
+      return isBusinessDay(start, customHolidays)
+        ? startOfDay(start)
+        : nextBusinessDayAfter(start, customHolidays);
+    }
+
+    if (frequency === "WEEKLY") {
+      const weeks = Math.ceil(calendarDayDifference(due, start) / 7);
+      return addDays(due, weeks * 7);
+    }
+
+    let guard = 0;
+    while (due < start && guard < 1200) {
+      due = calculateNextDue(due, frequency, customHolidays);
+      guard += 1;
+    }
+    return due;
+  }
+
+  function scheduleStatusForDate(date) {
+    const difference = calendarDayDifference(asOfDate, date);
+    if (difference < 0) return "OVERDUE";
+    if (difference === 0) return "DUE_TODAY";
+    return "SCHEDULED";
+  }
+
+  function scheduleStatusBadge(status) {
+    const labels = {
+      OVERDUE: ["Overdue", "overdue"],
+      DUE_TODAY: ["Due Today", "today"],
+      SCHEDULED: ["Scheduled", "upcoming"]
+    };
+    const [label, className] = labels[status] || [status, "no-history"];
+    return `<span class="badge ${className}">${label}</span>`;
+  }
+
+  function formatWeekday(date) {
+    return new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date);
   }
 
 
@@ -2983,6 +3179,22 @@
       : `Current view as of ${formatDate(asOfDate)} - verify against the source inspection record`;
     document.body.classList.add("printing-grade-board");
     const cleanup = () => document.body.classList.remove("printing-grade-board");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+  }
+
+  function printInspectionSchedule() {
+    const rows = [...els.scheduleTableBody.querySelectorAll(".schedule-row")];
+    if (!rows.length) {
+      showToast("No scheduled inspections are available to print for this date range.");
+      return;
+    }
+    if (!conferenceDemoMode && !confirmPlaintextOutput("Printing can expose unencrypted schedule contents to printers, print services, files, and bystanders. Continue only with an approved destination.")) return;
+
+    els.printTitle.textContent = "Sentinel Inspection Schedule";
+    els.printSummary.textContent = `${els.scheduleDescription.textContent} • ${rows.length} inspection${rows.length === 1 ? "" : "s"}`;
+    document.body.classList.add("printing-inspection-schedule");
+    const cleanup = () => document.body.classList.remove("printing-inspection-schedule");
     window.addEventListener("afterprint", cleanup, { once: true });
     window.print();
   }

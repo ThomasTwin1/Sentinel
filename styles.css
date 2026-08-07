@@ -146,10 +146,6 @@ body.privacy-protected > *:not(.privacy-shield) { pointer-events: none !importan
 body.conference-demo-mode .header-actions > :not(#vaultStatus):not(#lockBtn) {
   display: none !important;
 }
-body.conference-demo-mode .tabs .tab:not([data-tab="grade-board"]) {
-  display: none !important;
-}
-
 .tabs {
   display: flex;
   gap: 6px;
@@ -385,6 +381,84 @@ main { padding: 24px clamp(16px, 4vw, 64px) 64px; }
 .grade-board-updated { margin: 16px 0 0; color: var(--text-muted); font-size: 0.86rem; }
 .grade-board-empty { grid-column: 1 / -1; border-left-width: 1px; text-align: center; }
 .grade-board-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.schedule-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 18px;
+  padding: 22px;
+  border-radius: 14px;
+  color: white;
+  background: linear-gradient(135deg, #183b2b, #2f6748);
+}
+
+.schedule-hero h2 { margin-bottom: 6px; font-size: clamp(1.7rem, 4vw, 2.5rem); }
+.schedule-hero p:not(.eyebrow) { max-width: 760px; margin-bottom: 0; color: rgba(255,255,255,0.84); }
+.schedule-hero .button { flex: 0 0 auto; background: white; color: var(--brand-dark); }
+
+.schedule-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.schedule-window-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.schedule-window-actions > span { margin-right: 4px; color: var(--text-muted); font-size: 0.82rem; font-weight: 800; }
+
+.schedule-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.schedule-stat {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--brand);
+  border-radius: 10px;
+  background: white;
+  box-shadow: var(--shadow);
+}
+.schedule-stat.fpar { border-left-color: #3979a8; }
+.schedule-stat.milsans { border-left-color: #7a3f80; }
+.schedule-stat span { color: var(--text-muted); font-size: 0.82rem; font-weight: 800; }
+.schedule-stat strong { display: block; margin-top: 4px; font-size: 1.9rem; }
+
+.schedule-table { min-width: 1120px; }
+.schedule-date-cell strong,
+.schedule-date-cell span { display: block; }
+.schedule-date-cell span { margin-top: 3px; color: var(--text-muted); font-size: 0.76rem; }
+.schedule-program {
+  display: inline-flex;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+.schedule-program.fpar { color: #2e5d84; background: #e7f1f9; }
+.schedule-program.milsans { color: #604068; background: #f3eaf5; }
+.schedule-note {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid #e6ce88;
+  border-radius: 8px;
+  color: #654811;
+  background: #fff7df;
+}
 
 .toolbar, .filter-grid, .summary-grid, .split-layout { display: grid; gap: 16px; }
 .toolbar { grid-template-columns: 1fr 1fr; margin-bottom: 16px; }
@@ -2426,6 +2500,47 @@ input:focus, select:focus { outline: 3px solid rgba(36,75,53,0.12); border-color
   .grade-board-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grade-board-grid { grid-template-columns: 1fr; }
   .grade-board-details { grid-template-columns: 1fr; }
+  .schedule-hero { align-items: stretch; flex-direction: column; }
+  .schedule-hero .button { width: 100%; }
+  .schedule-controls,
+  .schedule-summary { grid-template-columns: 1fr; }
+  .schedule-window-actions { align-items: stretch; flex-direction: column; }
+  .schedule-window-actions > span { width: 100%; }
+  .schedule-window-actions .button { width: 100%; }
+  .schedule-table { min-width: 0; }
+  .schedule-table thead { display: none; }
+  .schedule-table tbody { display: grid; gap: 12px; padding: 12px; }
+  .schedule-table .schedule-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .schedule-table .schedule-row > td {
+    display: block;
+    min-width: 0;
+    padding: 11px;
+    border-top: 1px solid var(--border);
+    overflow-wrap: anywhere;
+  }
+  .schedule-table .schedule-row > td::before {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-muted);
+    content: attr(data-label);
+    font-size: 0.66rem;
+    font-weight: 850;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .schedule-table .schedule-row > td:first-child {
+    grid-column: 1 / -1;
+    border-top: 0;
+    background: #f8faf8;
+  }
 
   body {
     padding-bottom: calc(92px + env(safe-area-inset-bottom));
@@ -2473,4 +2588,76 @@ input:focus, select:focus { outline: 3px solid rgba(36,75,53,0.12); border-color
   body.printing-grade-board #printHeader { margin-bottom: 16px; }
   body.printing-grade-board .grade-board-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body.printing-grade-board .grade-board-card { break-inside: avoid; box-shadow: none; }
+
+  body.printing-inspection-schedule .app-header,
+  body.printing-inspection-schedule .security-banner,
+  body.printing-inspection-schedule .tabs,
+  body.printing-inspection-schedule .quick-scroll-controls,
+  body.printing-inspection-schedule #toast,
+  body.printing-inspection-schedule dialog,
+  body.printing-inspection-schedule #securityGate,
+  body.printing-inspection-schedule #privacyShield,
+  body.printing-inspection-schedule main > section:not(#printHeader):not(#inspection-schedule),
+  body.printing-inspection-schedule .schedule-controls,
+  body.printing-inspection-schedule .schedule-summary,
+  body.printing-inspection-schedule .schedule-hero .button,
+  body.printing-inspection-schedule .schedule-note {
+    display: none !important;
+  }
+
+  body.printing-inspection-schedule main { width: auto; max-width: none; padding: 0; }
+  body.printing-inspection-schedule #printHeader,
+  body.printing-inspection-schedule #inspection-schedule { display: block !important; }
+  body.printing-inspection-schedule #printHeader {
+    margin-bottom: 0.18in;
+    padding-bottom: 0.1in;
+    border-bottom: 2px solid var(--brand);
+  }
+  body.printing-inspection-schedule .schedule-hero {
+    display: block;
+    margin: 0 0 0.12in;
+    padding: 0;
+    color: #17211b;
+    background: none;
+  }
+  body.printing-inspection-schedule .schedule-hero .eyebrow,
+  body.printing-inspection-schedule .schedule-hero p { display: none; }
+  body.printing-inspection-schedule .schedule-hero h2 { margin: 0; font-size: 13pt; }
+  body.printing-inspection-schedule .schedule-table-card {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  body.printing-inspection-schedule .schedule-table-card .table-heading { display: none; }
+  body.printing-inspection-schedule .schedule-table-card .table-wrap { overflow: visible; }
+  body.printing-inspection-schedule .schedule-table {
+    display: table;
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+  body.printing-inspection-schedule .schedule-table thead { display: table-header-group; }
+  body.printing-inspection-schedule .schedule-table tbody { display: table-row-group; padding: 0; }
+  body.printing-inspection-schedule .schedule-table .schedule-row { display: table-row; break-inside: avoid; box-shadow: none; }
+  body.printing-inspection-schedule .schedule-table .schedule-row > td {
+    display: table-cell;
+    padding: 5px;
+    border: 1px solid #c8d2ca;
+    font-size: 6.8pt;
+    vertical-align: top;
+  }
+  body.printing-inspection-schedule .schedule-table .schedule-row > td::before { display: none; content: none; }
+  body.printing-inspection-schedule .schedule-table th {
+    padding: 5px;
+    border: 1px solid #aebbb2;
+    font-size: 6pt;
+  }
+  body.printing-inspection-schedule .schedule-table th:nth-child(1) { width: 11%; }
+  body.printing-inspection-schedule .schedule-table th:nth-child(2) { width: 7%; }
+  body.printing-inspection-schedule .schedule-table th:nth-child(3) { width: 17%; }
+  body.printing-inspection-schedule .schedule-table th:nth-child(4) { width: 13%; }
+  body.printing-inspection-schedule .schedule-table th:nth-child(5) { width: 13%; }
+  body.printing-inspection-schedule .schedule-table th:nth-child(6) { width: 15%; }
+  body.printing-inspection-schedule .schedule-table th:nth-child(7) { width: 10%; }
+  body.printing-inspection-schedule .schedule-table th:nth-child(8) { width: 14%; }
 }

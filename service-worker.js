@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "sentinel-tracker-";
-const CACHE_NAME = `${CACHE_PREFIX}v0.6.3-grade-board-filters`;
+const CACHE_NAME = `${CACHE_PREFIX}v0.7.0-no-sign-in-schedule`;
 const APP_SHELL = [
   "./",
   "./index.html",

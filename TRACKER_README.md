@@ -1,8 +1,8 @@
-# Sentinel Facility Due-Date Tracker v0.6.3 Secure Conference Prototype
+# Sentinel Facility Due-Date Tracker v0.7.0 No-Sign-In Fictional Test Edition
 
-A dependency-free browser prototype for validating Sentinel's first MVP feature: showing which food facilities are overdue, due today, due soon, or upcoming. Version 0.6.3 adds clickable A, B, C, F, and Follow-Up Required Grade Board filters while retaining direct internal navigation from each facility grade to its matching inspection details. It also includes the passphrase-encrypted local vault, fail-closed lifecycle locking, transactional encrypted-backup restore, bounded imports with common CSV quote compatibility, and fictional conference demo. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
+A dependency-free browser prototype for validating Sentinel inspection planning. Version 0.7.0 opens directly into a fictional, memory-only scenario with no sign-in prompt and adds a combined printable schedule for recurring FPAR requirements and next MILSANS actions. Imports and persistence are disabled in this public test mode. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
 
-## Working criteria in v0.6.3
+## Working criteria in v0.7.0
 
 - **Last Inspected** uses the latest inspection date listed for each facility.
 - Workflow status does not affect the countdown; Draft, Submitted, and Accepted rows are treated the same for date selection.
@@ -53,9 +53,9 @@ The interim encrypted edition is still not authorization for real-data use. Obta
 ## Run locally
 
 1. Download or clone the repository.
-2. Open `index.html` in Microsoft Edge, Chrome, or Firefox.
-3. Load fictional demo data or import one of the included `Sentinel_Fictional_*.csv` fixtures.
-4. Confirm due dates, signed Days to Due, colors, sorting, and filters.
+2. Serve the folder over `localhost` and open it in Microsoft Edge, Chrome, or Firefox.
+3. Sentinel opens the fictional scenario automatically; no sign-in is required.
+4. Confirm due dates, signed Days to Due, colors, sorting, filters, and the Inspection Schedule.
 
 ## Test
 
@@ -69,7 +69,7 @@ The tests cover monthly month-end behavior, weekly and quarterly calculations, s
 
 ## Architecture
 
-This v0.6.3 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. Application records are encrypted before being written to browser local storage, but decrypted data and the key exist in memory while Sentinel is unlocked. Shared team access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
+This v0.7.0 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. The hosted test edition loads fictional records into memory and does not persist them. The encrypted-vault implementation remains in the codebase for future controlled re-enablement, but the no-sign-in experience does not unlock or use a vault. Shared operational access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
 
 - v0.2.7 fixes the iPhone **Print Facility Cards** button so it correctly opens Safari's print sheet from the local Sentinel build.
 
@@ -286,3 +286,13 @@ Schedule-only rows are allowed when a facility has a due date but no completed r
 - Shows a visible selected state and scrolls to the first matching facility.
 - Tapping the selected tile again restores the complete Grade Board.
 - Keeps facility-grade buttons available for opening the exact inspection record inside Sentinel.
+
+## v0.7.0 No-Sign-In Printable Inspection Schedule
+
+- Opens the fictional test scenario automatically without a passphrase or account prompt.
+- Keeps all dashboard, Grade Board, calendar, test-guide, and schedule tabs available.
+- Disables CSV imports, backups, and browser persistence in no-sign-in mode.
+- Builds a date-ordered schedule for a selectable window of up to 366 days.
+- Expands recurring FPAR requirements and includes each facility's next MILSANS action.
+- Filters by FPAR/MILSANS and facility, installation, inspector, or assigned team.
+- Prints the exact filtered schedule with an explicit plaintext-output warning.
