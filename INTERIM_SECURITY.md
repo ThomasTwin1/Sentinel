@@ -1,7 +1,14 @@
-# Sentinel v0.6.3 Interim Security Guide
+# Sentinel v0.7.0 No-Sign-In Test Security Guide
+
+The v0.7.0 hosted/test edition opens without a passphrase or account prompt. It automatically loads fictional records into memory, disables file imports and encrypted-backup controls, and does not save edits. This convenience mode is only for synthetic demonstrations and schedule usability testing.
 
 ## What this edition improves
 
+- Removes the sign-in/passphrase gate from the fictional hosted test experience.
+- Prevents the no-sign-in session from writing application records to browser persistence.
+- Disables CSV imports and backup/restore controls while no-sign-in mode is active.
+- Adds a bounded, printable inspection schedule using the same fictional FPAR and MILSANS date rules as the dashboards.
+- Retains the encrypted-vault implementation and its tests for future controlled re-enablement; no-sign-in mode does not unlock or use that vault.
 - Encrypts saved application state with AES-256-GCM before browser persistence.
 - Derives the encryption key from a user passphrase with PBKDF2-HMAC-SHA-256 and a unique random salt.
 - Uses a new random 96-bit AES-GCM IV for every save and authenticates the vault metadata.
@@ -30,17 +37,17 @@ This is an interim local protection layer, not an enterprise security boundary.
 - No shared or synchronized team database. Each browser profile has a separate vault.
 - No passphrase recovery.
 - No claim that the browser's cryptographic module is FIPS validated.
+- No supported real-data workflow in v0.7.0. The absence of sign-in is not authorization to enter or import operational information.
 
 Do not use this edition for CUI, PII, classified information, or operational records unless the appropriate information owner and security office provide written approval for the exact device, hosting location, data, and workflow.
 
 ## Safe setup
 
-1. Use a current Microsoft Edge, Chrome, Firefox, or Safari browser on an approved, encrypted, managed device.
-2. Run Sentinel from `https://` or `localhost`. The application refuses to open when the required Web Crypto features are unavailable.
-3. Create a unique passphrase containing at least 14 characters. A long, high-entropy multi-word passphrase is strongly recommended because this local edition cannot centrally throttle offline guessing against a copied vault.
-4. Do not reuse an Army, work, email, banking, or personal account password.
-5. Store the passphrase separately in an organization-approved password manager. Sentinel cannot recover it.
-6. Use fictional data unless written authorization specifically permits other data.
+1. Use a current Microsoft Edge, Chrome, Firefox, or Safari browser.
+2. Run Sentinel from `https://` or `localhost`.
+3. Confirm the header says **No sign-in • fictional data** and CSV import controls are unavailable.
+4. Use only the automatically loaded fictional scenario. Do not enter, paste, import, or photograph operational data.
+5. Treat printed schedules and saved print-to-PDF files as unencrypted outputs, even when they contain only test data.
 
 For desktop-only development with Python installed:
 
@@ -52,24 +59,14 @@ Then open `http://127.0.0.1:8765/` on that same computer. `localhost` is treated
 
 ## Operating rules
 
-- Lock Sentinel before leaving the device or sharing the screen.
-- Do not give teammates a shared passphrase. Each authorized person/device should have its own local vault for this interim edition.
-- Create an encrypted backup before browser upgrades, site-data cleanup, or major imports.
-- Keep the `.sentinel` backup and its passphrase separate. Anyone with both can decrypt the backup.
-- Remember that the original CSV remains wherever it was selected from; Sentinel cannot encrypt or delete that original file.
-- Treat exported CSVs, printed pages, PDFs, screenshots, and clipboard contents as unencrypted.
+- Use **Reset Demo** to discard in-memory edits and restore the fictional scenario.
+- Do not re-enable imports or persistence to work around the no-sign-in boundary.
+- Treat printed pages, PDFs, screenshots, and clipboard contents as unencrypted.
 - Never upload an export, backup, real fixture, or screenshot containing operational data to GitHub.
-- Clearing browser site data or selecting **Delete encrypted data on this device** removes the local vault. Recovery requires an encrypted backup and its passphrase.
 
-## Backup and recovery
+## Encrypted-vault status
 
-1. Unlock Sentinel.
-2. Select **Encrypted Backup**.
-3. Store the resulting `.sentinel` file in an approved location.
-4. To restore, select **Restore Encrypted Backup** and choose the file.
-5. Enter the backup's passphrase. Sentinel decrypts and validates the complete backup before replacing anything, then opens the restored vault only if verification succeeds.
-
-The backup contains the complete encrypted vault and metadata needed for key derivation. It does not contain the passphrase.
+The repository still contains the previously tested encrypted-vault implementation and compatibility tests. Version 0.7.0 does not expose or unlock that vault because sign-in is disabled. Re-enabling the vault or any real-data path requires a separate security review, updated operating instructions, and explicit release approval.
 
 ## Verification
 
@@ -83,6 +80,7 @@ Important security checks are in:
 
 - `test-secure-vault.js`: encryption round-trip, wrong-passphrase denial, unique IVs, backup restore, and tamper detection.
 - `test-interim-security-policy.js`: CSP, vault integration, output warnings, file limits, and service-worker cache boundaries.
+- `test-no-sign-in-schedule.js`: automatic fictional startup, disabled persistence/imports, bounded schedule generation, printing, and mobile layout.
 - `test-public-data-policy.js`: prohibited repository data files and fictional-fixture policy.
 
 ## Moving to the operational version

@@ -7,13 +7,13 @@
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; worker-src 'self'; manifest-src 'self'" />
   <meta name="theme-color" content="#183b2b" />
-  <meta name="sentinel-release" content="0.6.3" />
+  <meta name="sentinel-release" content="0.7.0" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Sentinel Tracker" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <title>Sentinel Secure Conference Prototype v0.6.3</title>
+  <title>Sentinel No-Sign-In Fictional Test Edition v0.7.0</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -24,7 +24,7 @@
     </div>
   </div>
 
-  <section id="securityGate" class="security-gate" role="dialog" aria-modal="true" aria-labelledby="securityGateTitle">
+  <section id="securityGate" class="security-gate" role="dialog" aria-modal="true" aria-labelledby="securityGateTitle" hidden>
     <form id="securityForm" class="security-gate-card">
       <p class="eyebrow">INTERIM LOCAL PROTECTION</p>
       <h1 id="securityGateTitle">Unlock Sentinel</h1>
@@ -51,13 +51,13 @@
 
   <header class="app-header">
     <div>
-      <p class="eyebrow">SENTINEL INTERIM ENCRYPTED EDITION</p>
+      <p class="eyebrow">SENTINEL FICTIONAL TEST EDITION</p>
       <h1>Upcoming Food Inspection Tracker</h1>
       <p class="subtitle">See what is due before it becomes overdue.</p>
     </div>
     <div class="header-actions">
-      <span id="vaultStatus" class="vault-status">Locked</span>
-      <button id="lockBtn" class="button secondary" type="button">Lock</button>
+      <span id="vaultStatus" class="vault-status">No sign-in • fictional data</span>
+      <button id="lockBtn" class="button secondary" type="button">Reset Demo</button>
       <button id="loadConferenceDemoBtn" class="button primary" type="button">Conference Demo</button>
       <button id="loadDemoBtn" class="button secondary">Load Demo Data</button>
       <label class="button secondary file-label">
@@ -85,13 +85,14 @@
   </header>
 
   <div class="security-banner">
-    <strong>Interim protection only:</strong> Records are encrypted at rest on this device and auto-lock after inactivity. This is not approved hosting or enterprise authentication. Use fictional data unless your information owner and security office provide written authorization.
+    <strong>No-sign-in test mode:</strong> This hosted edition opens with fictional data only and does not save imported or edited records. It is not approved hosting or enterprise authentication. Do not enter CUI, PII, classified, or operational data.
   </div>
 
   <nav class="tabs" aria-label="Tracker sections">
     <button class="tab" data-tab="grade-board">DFAC Grade Board</button>
     <button class="tab active" data-tab="fpar-dashboard">FPAR Dashboard</button>
     <button class="tab" data-tab="milsans-dashboard">MILSANS Dashboard</button>
+    <button class="tab" data-tab="inspection-schedule">Inspection Schedule</button>
     <button class="tab" data-tab="calendar">Business Calendar</button>
     <button class="tab" data-tab="test-guide">Test Guide</button>
   </nav>
@@ -123,6 +124,78 @@
       <div id="gradeBoardSummary" class="grade-board-summary" role="group" aria-label="Filter fictional DFAC grades"></div>
       <div id="gradeBoardGrid" class="grade-board-grid"></div>
       <p id="gradeBoardUpdated" class="grade-board-updated"></p>
+    </section>
+
+    <section id="inspection-schedule" class="tab-panel">
+      <div class="schedule-hero">
+        <div>
+          <p class="eyebrow">PLANNING VIEW</p>
+          <h2>Inspection Schedule</h2>
+          <p>Build one date-ordered schedule from recurring FPAR requirements and the next MILSANS actions, then print the exact view shown below.</p>
+        </div>
+        <button id="printInspectionScheduleBtn" class="button primary" type="button">Print Inspection Schedule</button>
+      </div>
+
+      <div class="schedule-controls" aria-label="Inspection schedule options">
+        <div>
+          <label for="scheduleStartDate">Schedule start</label>
+          <input id="scheduleStartDate" type="date" />
+        </div>
+        <div>
+          <label for="scheduleEndDate">Schedule end</label>
+          <input id="scheduleEndDate" type="date" />
+        </div>
+        <div>
+          <label for="scheduleSourceFilter">Inspection program</label>
+          <select id="scheduleSourceFilter">
+            <option value="ALL">FPAR and MILSANS</option>
+            <option value="FPAR">FPAR only</option>
+            <option value="MILSANS">MILSANS only</option>
+          </select>
+        </div>
+        <div>
+          <label for="scheduleSearch">Search schedule</label>
+          <input id="scheduleSearch" type="search" placeholder="Facility, installation, inspector, or team" />
+        </div>
+        <div class="schedule-window-actions">
+          <span>Quick range</span>
+          <button id="schedule30DaysBtn" class="button small secondary" type="button">Next 30 Days</button>
+          <button id="schedule90DaysBtn" class="button small secondary" type="button">Next 90 Days</button>
+        </div>
+      </div>
+
+      <div id="scheduleSummary" class="schedule-summary" aria-label="Schedule totals"></div>
+
+      <div id="scheduleTableCard" class="table-card schedule-table-card">
+        <div class="table-heading">
+          <div>
+            <h2>Planned Inspections</h2>
+            <p id="scheduleDescription">Choose a date range to build the schedule.</p>
+          </div>
+          <span id="scheduleRecordCount" class="record-count"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="schedule-table">
+            <thead>
+              <tr>
+                <th>Inspection Date</th>
+                <th>Program</th>
+                <th>Facility</th>
+                <th>Installation</th>
+                <th>Inspector / Team</th>
+                <th>Requirement</th>
+                <th>Schedule Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="scheduleTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="schedule-note">
+        <strong>Planning aid:</strong> Verify dates and assignments against the authoritative inspection system before action. Printed schedules are unencrypted outputs and must be protected separately.
+      </div>
     </section>
 
     <section id="fpar-dashboard" class="tab-panel active">
@@ -697,6 +770,8 @@
           <li><strong>Missed Month:</strong> Confirm missed facilities display the exact 25th of the month in which the required monthly or quarterly inspection was due.</li>
           <li><strong>TSFC letter grades:</strong> Confirm Fully=A, Substantially=B, Partially=C, and Noncompliant=F. Confirm no D grade appears.</li>
           <li><strong>DFAC summary filters:</strong> Tap A, B, C, F, and Follow-Up Required. Confirm the selected tile shows only matching facilities, and tap it again to show all facilities. Confirm a facility's letter grade still opens the exact inspection record.</li>
+          <li><strong>No-sign-in mode:</strong> Reload Sentinel and confirm the fictional scenario opens without a passphrase prompt, imports remain disabled, and Reset Demo returns to the FPAR Dashboard without showing a sign-in screen.</li>
+          <li><strong>Inspection Schedule:</strong> Open Inspection Schedule, choose a date range, filter FPAR or MILSANS, search for a fictional facility, and confirm the rows remain date ordered. Select Print Inspection Schedule and confirm only the filtered schedule appears in print preview.</li>
           <li><strong>Backup and restore:</strong> Export an encrypted <code>.sentinel</code> backup, delete or change a record, then verify and restore the file with its passphrase.</li>
         </ol>
         <div class="callout">
