@@ -1,6 +1,6 @@
 # Sentinel
 
-> **No-sign-in fictional test edition (v0.7.0):** Sentinel now opens directly into an in-memory fictional scenario with no passphrase or account prompt. The new Inspection Schedule combines recurring FPAR dates and next MILSANS actions for a selected date range and prints the exact filtered view. Imports, backups, and browser persistence remain disabled in this mode. It is **not** an approved Army information system and must not receive CUI, PII, classified, or operational data. See [INTERIM_SECURITY.md](INTERIM_SECURITY.md).
+> **No-sign-in session test edition (v0.7.1):** Sentinel opens directly into an in-memory fictional scenario with no passphrase or account prompt. FPAR, MILSANS, and inaccessible-facility CSV controls are available for fictional or approved sanitized testing, but parsed records remain only in the current tab and are cleared by Reset Demo, refresh, or closing the tab. Facility cards and the combined Inspection Schedule can be printed with a plaintext-output warning. Backups and browser persistence remain disabled. It is **not** an approved Army information system and must not receive CUI, PII, classified, or operational data. See [INTERIM_SECURITY.md](INTERIM_SECURITY.md).
 
 **Protecting Soldiers Through Smarter Food Protection.**
 
@@ -220,7 +220,7 @@ Sentinel should be measured by its ability to improve outcomes such as:
 
 ## Current Status
 
-Sentinel now includes a dependency-free browser prototype for FPAR and MILSANS inspection planning. The current v0.7.0 hosted build opens without sign-in using fictional, memory-only data; adds a combined, filterable, printable Inspection Schedule; and retains the DFAC Grade Board, due-date dashboards, missed-history calculations, inaccessible-facility visualization, and printable facility cards. The no-sign-in edition disables imports and persistence.
+Sentinel now includes a dependency-free browser prototype for FPAR and MILSANS inspection planning. The current v0.7.1 hosted build opens without sign-in using fictional, memory-only data; provides bounded session-only CSV imports; adds a combined, filterable, printable Inspection Schedule; and retains the DFAC Grade Board, due-date dashboards, missed-history calculations, inaccessible-facility visualization, and printable facility cards. The no-sign-in edition does not persist records and does not expose encrypted backup or restore controls.
 
 See [TRACKER_README.md](TRACKER_README.md) for feature details and test commands. Public testing must use fictional fixtures. Authorized operational-data evaluation must use a downloaded local copy and follow [LOCAL_REAL_DATA_TESTING.md](LOCAL_REAL_DATA_TESTING.md); real exports must never be uploaded or committed to this public repository.
 

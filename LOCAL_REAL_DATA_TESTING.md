@@ -6,7 +6,7 @@ Sentinel's public GitHub repository and GitHub Pages site are for source code an
 
 The repository owner or application developer cannot independently authorize operational data in Sentinel. Before using anything except fictional data, obtain written direction covering the exact data, device, browser, hosting location, users, workflow, retention, exports, and incident-reporting path from the information owner and appropriate security office.
 
-Version 0.7.0 is a no-sign-in fictional test edition. It automatically loads synthetic records into memory and disables file imports, encrypted backups, and browser persistence. There is no supported real-data workflow in this release. Do not modify the client to bypass those controls; use an approved environment and separately reviewed architecture for any future operational evaluation. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) for the complete limitations.
+Version 0.7.1 is a no-sign-in session test edition. It automatically loads synthetic records and exposes bounded CSV controls for fictional or approved sanitized testing. Selected files are parsed in the current browser tab; the resulting records are not written to Sentinel browser persistence and are cleared by Reset Demo, refresh, or closing the tab. Encrypted backup/restore remains unavailable. There is no supported operational-data workflow in this public release; use an approved environment and separately reviewed architecture for any future operational evaluation. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) for the complete limitations.
 
 The original imported CSV, exported CSVs, printouts, PDFs, screenshots, and clipboard contents remain outside the encrypted vault and must be protected separately.
 

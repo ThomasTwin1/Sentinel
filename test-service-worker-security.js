@@ -10,7 +10,7 @@ async function run() {
   const navigated = [];
   let claimed = false;
   const cachePuts = [];
-  const currentCache = "sentinel-tracker-v0.7.0-no-sign-in-schedule";
+  const currentCache = "sentinel-tracker-v0.7.1-session-import-controls";
   const caches = {
     async keys() { return ["unrelated-app-cache", "sentinel-tracker-v0.5.1-secure", currentCache]; },
     async delete(key) { deleted.push(key); return true; },

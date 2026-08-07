@@ -462,6 +462,7 @@
     els.vaultStatus.textContent = "Encrypted vault unlocked";
     els.lockBtn.textContent = "Lock";
     setImportControlsDisabled(false);
+    setBackupControlsDisabled(false);
     resetAutoLockTimer();
     renderAll();
     switchTab(initialTabFromHash(), false);
@@ -502,13 +503,14 @@
     document.body.classList.add("conference-demo-mode");
     els.vaultStatus.textContent = SIGN_IN_DISABLED ? "No sign-in • fictional data" : "Fictional demo • not saved";
     els.lockBtn.textContent = SIGN_IN_DISABLED ? "Reset Demo" : "Exit Demo";
-    setImportControlsDisabled(true);
+    setImportControlsDisabled(!SIGN_IN_DISABLED);
+    setBackupControlsDisabled(true);
     renderAll();
     switchTab("grade-board");
     focusGradeBoard();
     releasePrivacyShield();
     showToast(SIGN_IN_DISABLED
-      ? "No-sign-in fictional test mode opened. Data is not saved."
+      ? "No-sign-in session mode opened with fictional data. Data is not saved."
       : "Fictional conference scenario loaded in memory only.");
   }
 
@@ -525,6 +527,7 @@
     state = emptyState();
     document.body.classList.remove("conference-demo-mode");
     setImportControlsDisabled(false);
+    setBackupControlsDisabled(false);
     renderAll();
     els.vaultStatus.textContent = "Locked";
     els.lockBtn.textContent = "Lock";
@@ -536,12 +539,36 @@
       els.importCsvInput,
       els.importMilsansCsvTopInput,
       els.importInaccessibleCsvInput,
-      els.importJsonInput,
       els.importMilsansCsvInput
     ].filter(Boolean).forEach(input => {
       input.disabled = disabled;
       input.closest(".file-label")?.classList.toggle("disabled", disabled);
     });
+  }
+
+  function setBackupControlsDisabled(disabled) {
+    if (els.importJsonInput) {
+      els.importJsonInput.disabled = disabled;
+      els.importJsonInput.closest(".file-label")?.classList.toggle("disabled", disabled);
+    }
+    if (els.exportJsonBtn) els.exportJsonBtn.disabled = disabled;
+  }
+
+  function confirmSessionCsvImport(file, label) {
+    if (!SIGN_IN_DISABLED) return true;
+    return confirm(
+      `Import ${label} CSV "${file.name}" into this browser tab?\n\n`
+      + "Sentinel will parse the selected file locally and keep the resulting records in memory for this tab only. "
+      + "Reset Demo, refreshing, or closing the tab clears them. This public site is not approved hosting; use only fictional or approved sanitized test data."
+    );
+  }
+
+  function markSessionImportActive() {
+    if (SIGN_IN_DISABLED) els.vaultStatus.textContent = "No sign-in • imported session data";
+  }
+
+  function deferFileImportPrompt() {
+    return new Promise(resolve => window.setTimeout(resolve, 0));
   }
 
   function initialTabFromHash() {
@@ -1432,9 +1459,16 @@
     return Math.round(ms / 86400000);
   }
 
-  function loadDemoData() {
-    if (state.facilities.length && !confirm("Replace current tracker data with fictional demo data? Export a backup first if needed.")) return;
+  async function loadDemoData() {
+    const replaceMessage = SIGN_IN_DISABLED
+      ? "Replace the current session data with fictional demo data? This clears imported records from this tab."
+      : "Replace current tracker data with fictional demo data? Export a backup first if needed.";
+    if (state.facilities.length) {
+      await deferFileImportPrompt();
+      if (!confirm(replaceMessage)) return;
+    }
     state = buildFictionalDemoState(startOfDay(new Date()));
+    if (SIGN_IN_DISABLED) els.vaultStatus.textContent = "No sign-in • fictional data";
     saveState();
     renderAll();
     showToast("Fictional demo data loaded.");
@@ -1445,6 +1479,7 @@
     if (!conferenceDemoMode && hasData && !confirm("Replace current local tracker data with the fictional conference scenario? Create an encrypted backup first if needed.")) return;
     gradeBoardFilter = "";
     state = buildFictionalDemoState(startOfDay(new Date()));
+    if (SIGN_IN_DISABLED) els.vaultStatus.textContent = "No sign-in • fictional data";
     if (!conferenceDemoMode) {
       addAudit("FICTIONAL_CONFERENCE_DEMO_LOADED", crypto.randomUUID(), null, {
         recordsLoaded: state.milsansInspections.length,
@@ -1572,6 +1607,8 @@
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    await deferFileImportPrompt();
+    if (!confirmSessionCsvImport(file, "MILSANS")) return;
 
     try {
       const rows = parseCsv(await readCsvFile(file));
@@ -1730,11 +1767,13 @@
         }
       });
 
-      if (state.milsansInspections?.length && !confirm(
-        `Replace ${state.milsansInspections.length} stored MILSANS records with ${uniqueRecords.length} records from this CSV?\n\nExport a JSON backup first if needed.`
-      )) return;
+      const replaceMessage = SIGN_IN_DISABLED
+        ? `Replace ${state.milsansInspections?.length || 0} MILSANS records in this tab with ${uniqueRecords.length} records from this CSV?`
+        : `Replace ${state.milsansInspections.length} stored MILSANS records with ${uniqueRecords.length} records from this CSV?\n\nExport a JSON backup first if needed.`;
+      if (state.milsansInspections?.length && !confirm(replaceMessage)) return;
 
       state.milsansInspections = uniqueRecords;
+      markSessionImportActive();
       addAudit("MILSANS_CSV_IMPORTED", crypto.randomUUID(), null, {
         fileName: file.name,
         recordsImported: uniqueRecords.length,
@@ -2730,6 +2769,8 @@
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    await deferFileImportPrompt();
+    if (!confirmSessionCsvImport(file, "FPAR")) return;
 
     try {
       const rows = parseCsv(await readCsvFile(file));
@@ -2785,9 +2826,10 @@
         throw new Error("No dated inspection records were found.");
       }
 
-      if (state.facilities.length && !confirm(
-        `Replace the ${state.facilities.length} facilities currently stored in this browser with ${grouped.size} facilities from this CSV?\n\nExport a JSON backup first if needed.`
-      )) {
+      const replaceMessage = SIGN_IN_DISABLED
+        ? `Replace the ${state.facilities.length} facilities in this tab with ${grouped.size} facilities from this CSV?`
+        : `Replace the ${state.facilities.length} facilities currently stored in this browser with ${grouped.size} facilities from this CSV?\n\nExport a JSON backup first if needed.`;
+      if (state.facilities.length && !confirm(replaceMessage)) {
         return;
       }
 
@@ -2823,6 +2865,7 @@
         milsansInspections: state.milsansInspections || [],
         audit: state.audit || []
       };
+      markSessionImportActive();
 
       addAudit("FPAR_CSV_IMPORTED", crypto.randomUUID(), null, {
         fileName: file.name,
@@ -2850,6 +2893,8 @@
       alert("Import the inspection CSV first so Sentinel has facilities to match.");
       return;
     }
+    await deferFileImportPrompt();
+    if (!confirmSessionCsvImport(file, "inaccessible-facility")) return;
 
     try {
       const rows = parseCsv(await readCsvFile(file));
@@ -2898,9 +2943,10 @@
         throw new Error(`The file contains more than ${MAX_IMPORTED_RECORDS.toLocaleString()} inaccessible-facility records.`);
       }
 
-      if (!confirm(
-        `Apply ${records.length} inaccessible facility records to Sentinel?\n\nExisting inaccessible flags will be cleared first, then matching facilities from this file will be marked inaccessible. Export a JSON backup first if needed.`
-      )) {
+      const applyMessage = SIGN_IN_DISABLED
+        ? `Apply ${records.length} inaccessible facility records to this tab?\n\nExisting inaccessible flags will be cleared first, then matching facilities from this file will be marked inaccessible.`
+        : `Apply ${records.length} inaccessible facility records to Sentinel?\n\nExisting inaccessible flags will be cleared first, then matching facilities from this file will be marked inaccessible. Export a JSON backup first if needed.`;
+      if (!confirm(applyMessage)) {
         return;
       }
 
@@ -2936,6 +2982,7 @@
         unmatchedFacilities: unmatched.length,
         importedAt: now
       });
+      markSessionImportActive();
 
       saveState();
       renderAll();
@@ -3172,10 +3219,10 @@
       showToast("Load a fictional scenario or authorized records before printing the Grade Board.");
       return;
     }
-    if (!conferenceDemoMode && !confirmPlaintextOutput("Printing can expose unencrypted record contents to printers, print services, files, and bystanders. Continue only with an approved destination.")) return;
+    if (!confirmPlaintextOutput("Printing can expose unencrypted record contents to printers, print services, files, and bystanders. Continue only with an approved destination.")) return;
     els.printTitle.textContent = "Sentinel DFAC Inspection Letter Grade Board";
     els.printSummary.textContent = conferenceDemoMode
-      ? "Fictional conference scenario - not authoritative"
+      ? (SIGN_IN_DISABLED ? "Session-only view - verify every record before use" : "Fictional conference scenario - not authoritative")
       : `Current view as of ${formatDate(asOfDate)} - verify against the source inspection record`;
     document.body.classList.add("printing-grade-board");
     const cleanup = () => document.body.classList.remove("printing-grade-board");
@@ -3189,7 +3236,7 @@
       showToast("No scheduled inspections are available to print for this date range.");
       return;
     }
-    if (!conferenceDemoMode && !confirmPlaintextOutput("Printing can expose unencrypted schedule contents to printers, print services, files, and bystanders. Continue only with an approved destination.")) return;
+    if (!confirmPlaintextOutput("Printing can expose unencrypted schedule contents to printers, print services, files, and bystanders. Continue only with an approved destination.")) return;
 
     els.printTitle.textContent = "Sentinel Inspection Schedule";
     els.printSummary.textContent = `${els.scheduleDescription.textContent} • ${rows.length} inspection${rows.length === 1 ? "" : "s"}`;
@@ -3313,7 +3360,10 @@
   }
 
   function confirmPlaintextOutput(message) {
-    return confirm(`${message}\n\nThis interim encryption protects Sentinel's local vault only. It does not encrypt exported CSV files, printed pages, screenshots, or the original files you imported.`);
+    const boundary = SIGN_IN_DISABLED
+      ? "No-sign-in session mode does not encrypt or save records. It also cannot protect printed pages, PDFs, screenshots, or the original files you imported."
+      : "This interim encryption protects Sentinel's local vault only. It does not encrypt exported CSV files, printed pages, screenshots, or the original files you imported.";
+    return confirm(`${message}\n\n${boundary}`);
   }
 
 

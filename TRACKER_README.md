@@ -1,8 +1,8 @@
-# Sentinel Facility Due-Date Tracker v0.7.0 No-Sign-In Fictional Test Edition
+# Sentinel Facility Due-Date Tracker v0.7.1 No-Sign-In Session Test Edition
 
-A dependency-free browser prototype for validating Sentinel inspection planning. Version 0.7.0 opens directly into a fictional, memory-only scenario with no sign-in prompt and adds a combined printable schedule for recurring FPAR requirements and next MILSANS actions. Imports and persistence are disabled in this public test mode. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
+A dependency-free browser prototype for validating Sentinel inspection planning. Version 0.7.1 opens directly into a fictional, memory-only scenario with no sign-in prompt, restores bounded CSV imports for current-tab testing, and includes a combined printable schedule for recurring FPAR requirements and next MILSANS actions. Imported and edited records are not persisted. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
 
-## Working criteria in v0.7.0
+## Working criteria in v0.7.1
 
 - **Last Inspected** uses the latest inspection date listed for each facility.
 - Workflow status does not affect the countdown; Draft, Submitted, and Accepted rows are treated the same for date selection.
@@ -28,7 +28,7 @@ A dependency-free browser prototype for validating Sentinel inspection planning.
 
 ## CSV import
 
-The **Import Inspection CSV** button accepts a VSIMS/FPAR-style CSV export.
+The **Import FPAR CSV** button accepts a VSIMS/FPAR-style CSV export. **Import MILSANS CSV** and **Import Inaccessible CSV** support their corresponding bounded formats. In no-sign-in mode, every import requires confirmation and the resulting records remain in memory only for the current browser tab.
 
 The importer:
 
@@ -69,7 +69,7 @@ The tests cover monthly month-end behavior, weekly and quarterly calculations, s
 
 ## Architecture
 
-This v0.7.0 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. The hosted test edition loads fictional records into memory and does not persist them. The encrypted-vault implementation remains in the codebase for future controlled re-enablement, but the no-sign-in experience does not unlock or use a vault. Shared operational access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
+This v0.7.1 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. The hosted test edition loads fictional records into memory and can replace them with a bounded, user-selected CSV for the current tab, but it does not persist records. The encrypted-vault implementation remains in the codebase for future controlled re-enablement, but the no-sign-in experience does not unlock or use a vault. Shared operational access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
 
 - v0.2.7 fixes the iPhone **Print Facility Cards** button so it correctly opens Safari's print sheet from the local Sentinel build.
 
@@ -296,3 +296,13 @@ Schedule-only rows are allowed when a facility has a due date but no completed r
 - Expands recurring FPAR requirements and includes each facility's next MILSANS action.
 - Filters by FPAR/MILSANS and facility, installation, inspector, or assigned team.
 - Prints the exact filtered schedule with an explicit plaintext-output warning.
+
+## v0.7.1 Session-Only Imports and Facility-Card Printing
+
+- Restores the header controls for **Import FPAR CSV**, **Import MILSANS CSV**, and **Import Inaccessible CSV**.
+- Restores **Load Demo Data**, **Print FPAR Cards**, and **Print MILSANS Cards** in no-sign-in mode.
+- Keeps CSV size, row, column, field, type, and record-count limits in force.
+- Requires a session-only data warning before Sentinel reads a selected CSV.
+- Keeps imported and edited records in memory only; Reset Demo, refresh, and closing the tab clear them.
+- Keeps encrypted backup/restore and browser persistence disabled.
+- Warns before every facility-card, Grade Board, or schedule print action because print destinations and PDFs are outside Sentinel's protection.

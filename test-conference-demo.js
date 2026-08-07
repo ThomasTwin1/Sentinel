@@ -9,7 +9,7 @@ const styles = fs.readFileSync("styles.css", "utf8");
 
 assert.match(html, /data-tab="grade-board"/);
 assert.match(html, /DFAC Inspection Letter Grade Board/);
-assert.match(html, /name="sentinel-release" content="0\.7\.0"/, "the deployed page must expose its release version");
+assert.match(html, /name="sentinel-release" content="0\.7\.1"/, "the deployed page must expose its release version");
 assert.match(html, /Prototype visualization:/);
 assert.match(html, /authoritative result remains the completed inspection record/i);
 assert.match(html, /Open fictional conference demo/);
@@ -18,7 +18,8 @@ assert.match(app, /function startConferenceDemoMode\(\)/);
 assert.match(app, /conferenceDemoMode = true/);
 assert.match(app, /state = buildFictionalDemoState/);
 assert.match(app, /if \(conferenceDemoMode\) return;/, "fictional conference mode must not persist application state");
-assert.match(app, /setImportControlsDisabled\(true\)/, "conference mode must disable file imports");
+assert.match(app, /setImportControlsDisabled\(!SIGN_IN_DISABLED\)/, "the no-sign-in release must enable only its bounded session import paths");
+assert.match(app, /setBackupControlsDisabled\(true\)/, "conference mode must keep encrypted backup controls disabled");
 assert.match(app, /switchTab\("grade-board"\)/);
 assert.match(app, /function renderGradeBoard\(\)/);
 assert.match(app, /data-grade-board-filter/, "grade summary tiles must expose filter actions");

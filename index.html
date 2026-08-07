@@ -7,13 +7,13 @@
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; worker-src 'self'; manifest-src 'self'" />
   <meta name="theme-color" content="#183b2b" />
-  <meta name="sentinel-release" content="0.7.0" />
+  <meta name="sentinel-release" content="0.7.1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Sentinel Tracker" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <title>Sentinel No-Sign-In Fictional Test Edition v0.7.0</title>
+  <title>Sentinel No-Sign-In Session Test Edition v0.7.1</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -51,7 +51,7 @@
 
   <header class="app-header">
     <div>
-      <p class="eyebrow">SENTINEL FICTIONAL TEST EDITION</p>
+      <p class="eyebrow">SENTINEL SESSION-ONLY TEST EDITION</p>
       <h1>Upcoming Food Inspection Tracker</h1>
       <p class="subtitle">See what is due before it becomes overdue.</p>
     </div>
@@ -59,23 +59,23 @@
       <span id="vaultStatus" class="vault-status">No sign-in • fictional data</span>
       <button id="lockBtn" class="button secondary" type="button">Reset Demo</button>
       <button id="loadConferenceDemoBtn" class="button primary" type="button">Conference Demo</button>
-      <button id="loadDemoBtn" class="button secondary">Load Demo Data</button>
-      <label class="button secondary file-label">
+      <button id="loadDemoBtn" class="button secondary" type="button">Load Demo Data</button>
+      <label class="button secondary file-label session-import-control">
         Import FPAR CSV
         <input id="importCsvInput" type="file" accept=".csv,text/csv" hidden />
       </label>
-      <label class="button secondary file-label">
+      <label class="button secondary file-label session-import-control">
         Import MILSANS CSV
         <input id="importMilsansCsvTopInput" type="file" accept=".csv,text/csv" hidden />
       </label>
-      <label class="button secondary file-label">
+      <label class="button secondary file-label session-import-control">
         Import Inaccessible CSV
         <input id="importInaccessibleCsvInput" type="file" accept=".csv,text/csv" hidden />
       </label>
       <button id="exportCsvBtn" class="button secondary">Export FPAR CSV</button>
       <button id="exportMilsansCsvTopBtn" class="button secondary">Export MILSANS CSV</button>
-      <button id="printFparCardsBtn" class="button secondary">Print FPAR Cards</button>
-      <button id="printMilsansCardsBtn" class="button secondary">Print MILSANS Cards</button>
+      <button id="printFparCardsBtn" class="button secondary" type="button">Print FPAR Cards</button>
+      <button id="printMilsansCardsBtn" class="button secondary" type="button">Print MILSANS Cards</button>
       <button id="exportJsonBtn" class="button secondary">Encrypted Backup</button>
       <label class="button secondary file-label">
         Restore Encrypted Backup
@@ -85,7 +85,7 @@
   </header>
 
   <div class="security-banner">
-    <strong>No-sign-in test mode:</strong> This hosted edition opens with fictional data only and does not save imported or edited records. It is not approved hosting or enterprise authentication. Do not enter CUI, PII, classified, or operational data.
+    <strong>No-sign-in session mode:</strong> CSV imports are processed in this browser tab and are cleared by Reset Demo, refresh, or closing the tab. Sentinel does not intentionally upload or save imported records in this mode. The public site remains for fictional or approved sanitized test data only; do not use CUI, PII, classified, or operational data.
   </div>
 
   <nav class="tabs" aria-label="Tracker sections">
@@ -770,9 +770,9 @@
           <li><strong>Missed Month:</strong> Confirm missed facilities display the exact 25th of the month in which the required monthly or quarterly inspection was due.</li>
           <li><strong>TSFC letter grades:</strong> Confirm Fully=A, Substantially=B, Partially=C, and Noncompliant=F. Confirm no D grade appears.</li>
           <li><strong>DFAC summary filters:</strong> Tap A, B, C, F, and Follow-Up Required. Confirm the selected tile shows only matching facilities, and tap it again to show all facilities. Confirm a facility's letter grade still opens the exact inspection record.</li>
-          <li><strong>No-sign-in mode:</strong> Reload Sentinel and confirm the fictional scenario opens without a passphrase prompt, imports remain disabled, and Reset Demo returns to the FPAR Dashboard without showing a sign-in screen.</li>
+          <li><strong>No-sign-in mode:</strong> Reload Sentinel and confirm the fictional scenario opens without a passphrase prompt, the three CSV import controls are available, and Reset Demo clears session changes and returns to the FPAR Dashboard without showing a sign-in screen.</li>
           <li><strong>Inspection Schedule:</strong> Open Inspection Schedule, choose a date range, filter FPAR or MILSANS, search for a fictional facility, and confirm the rows remain date ordered. Select Print Inspection Schedule and confirm only the filtered schedule appears in print preview.</li>
-          <li><strong>Backup and restore:</strong> Export an encrypted <code>.sentinel</code> backup, delete or change a record, then verify and restore the file with its passphrase.</li>
+          <li><strong>Encrypted-vault compatibility:</strong> The automated security suite continues to verify encrypted backup and restore behavior, but those controls are not exposed in no-sign-in session mode.</li>
         </ol>
         <div class="callout">
           <strong>Document defects in GitHub:</strong> Record the test setup, expected result, actual result, screenshots, and the decision made after testing.

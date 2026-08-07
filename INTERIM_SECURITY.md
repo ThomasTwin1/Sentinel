@@ -1,12 +1,13 @@
-# Sentinel v0.7.0 No-Sign-In Test Security Guide
+# Sentinel v0.7.1 No-Sign-In Session Test Security Guide
 
-The v0.7.0 hosted/test edition opens without a passphrase or account prompt. It automatically loads fictional records into memory, disables file imports and encrypted-backup controls, and does not save edits. This convenience mode is only for synthetic demonstrations and schedule usability testing.
+The v0.7.1 hosted/test edition opens without a passphrase or account prompt. It automatically loads fictional records into memory and exposes bounded FPAR, MILSANS, and inaccessible-facility CSV controls for fictional or approved sanitized testing. Parsed records and edits remain only in the current browser tab and are cleared by Reset Demo, refresh, or closing the tab. Encrypted backup/restore remains disabled.
 
 ## What this edition improves
 
 - Removes the sign-in/passphrase gate from the fictional hosted test experience.
 - Prevents the no-sign-in session from writing application records to browser persistence.
-- Disables CSV imports and backup/restore controls while no-sign-in mode is active.
+- Enables the three bounded CSV import paths in no-sign-in mode while keeping backup/restore controls disabled.
+- Requires an explicit session-only warning before reading a selected CSV.
 - Adds a bounded, printable inspection schedule using the same fictional FPAR and MILSANS date rules as the dashboards.
 - Retains the encrypted-vault implementation and its tests for future controlled re-enablement; no-sign-in mode does not unlock or use that vault.
 - Encrypts saved application state with AES-256-GCM before browser persistence.
@@ -37,7 +38,7 @@ This is an interim local protection layer, not an enterprise security boundary.
 - No shared or synchronized team database. Each browser profile has a separate vault.
 - No passphrase recovery.
 - No claim that the browser's cryptographic module is FIPS validated.
-- No supported real-data workflow in v0.7.0. The absence of sign-in is not authorization to enter or import operational information.
+- No supported operational-data workflow in v0.7.1. The presence of CSV buttons and absence of sign-in are not authorization to import operational information.
 
 Do not use this edition for CUI, PII, classified information, or operational records unless the appropriate information owner and security office provide written approval for the exact device, hosting location, data, and workflow.
 
@@ -45,8 +46,8 @@ Do not use this edition for CUI, PII, classified information, or operational rec
 
 1. Use a current Microsoft Edge, Chrome, Firefox, or Safari browser.
 2. Run Sentinel from `https://` or `localhost`.
-3. Confirm the header says **No sign-in • fictional data** and CSV import controls are unavailable.
-4. Use only the automatically loaded fictional scenario. Do not enter, paste, import, or photograph operational data.
+3. Confirm the header says **No sign-in • fictional data** and the three CSV import controls are available.
+4. Use only the automatically loaded scenario, repository fictional fixtures, or separately approved sanitized test data. Do not enter, paste, import, or photograph operational data.
 5. Treat printed schedules and saved print-to-PDF files as unencrypted outputs, even when they contain only test data.
 
 For desktop-only development with Python installed:
@@ -59,14 +60,15 @@ Then open `http://127.0.0.1:8765/` on that same computer. `localhost` is treated
 
 ## Operating rules
 
-- Use **Reset Demo** to discard in-memory edits and restore the fictional scenario.
-- Do not re-enable imports or persistence to work around the no-sign-in boundary.
+- Use **Reset Demo** to discard in-memory imports and edits and restore the fictional scenario.
+- Treat every CSV selected through the import buttons as plaintext outside Sentinel's control; the original file is not protected by this application.
+- Do not re-enable persistence or encrypted backup/restore to work around the no-sign-in boundary.
 - Treat printed pages, PDFs, screenshots, and clipboard contents as unencrypted.
 - Never upload an export, backup, real fixture, or screenshot containing operational data to GitHub.
 
 ## Encrypted-vault status
 
-The repository still contains the previously tested encrypted-vault implementation and compatibility tests. Version 0.7.0 does not expose or unlock that vault because sign-in is disabled. Re-enabling the vault or any real-data path requires a separate security review, updated operating instructions, and explicit release approval.
+The repository still contains the previously tested encrypted-vault implementation and compatibility tests. Version 0.7.1 does not expose or unlock that vault because sign-in is disabled. Re-enabling the vault or an operational-data path requires a separate security review, updated operating instructions, and explicit release approval.
 
 ## Verification
 
@@ -80,7 +82,7 @@ Important security checks are in:
 
 - `test-secure-vault.js`: encryption round-trip, wrong-passphrase denial, unique IVs, backup restore, and tamper detection.
 - `test-interim-security-policy.js`: CSP, vault integration, output warnings, file limits, and service-worker cache boundaries.
-- `test-no-sign-in-schedule.js`: automatic fictional startup, disabled persistence/imports, bounded schedule generation, printing, and mobile layout.
+- `test-no-sign-in-schedule.js`: automatic fictional startup, disabled persistence/backups, enabled bounded session imports, exposed print/demo controls, schedule generation, printing, and mobile layout.
 - `test-public-data-policy.js`: prohibited repository data files and fictional-fixture policy.
 
 ## Moving to the operational version
