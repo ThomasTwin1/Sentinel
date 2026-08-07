@@ -12,9 +12,10 @@ const initializeBlock = app.match(/async function initializeSecurity[\s\S]*?\n  
 assert.match(initializeBlock, /if \(SIGN_IN_DISABLED\)/);
 assert.match(initializeBlock, /startConferenceDemoMode\(\)/, "no-sign-in startup must enter memory-only fictional mode");
 assert.match(html, /id="securityGate"[^>]*hidden/, "the disabled sign-in gate must not flash before startup");
-assert.match(html, /No-sign-in test mode:/);
+assert.match(html, /No-sign-in session mode:/);
 assert.match(app, /if \(conferenceDemoMode\) return;/, "no-sign-in fictional data must not persist");
-assert.match(app, /setImportControlsDisabled\(true\)/, "no-sign-in mode must disable file imports");
+assert.match(app, /setImportControlsDisabled\(!SIGN_IN_DISABLED\)/, "no-sign-in mode must enable bounded session CSV imports");
+assert.match(app, /setBackupControlsDisabled\(true\)/, "no-sign-in mode must keep encrypted backup controls disabled");
 assert.doesNotMatch(styles, /conference-demo-mode \.tabs \.tab:not/, "no-sign-in mode must expose the schedule and dashboard tabs");
 
 assert.match(html, /data-tab="inspection-schedule"/);
