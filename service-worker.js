@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "sentinel-tracker-";
-const CACHE_NAME = `${CACHE_PREFIX}v0.7.1-session-import-controls`;
+const CACHE_NAME = `${CACHE_PREFIX}v0.8.0-operations-hub`;
 const APP_SHELL = [
   "./",
   "./index.html",

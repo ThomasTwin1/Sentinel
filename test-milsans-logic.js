@@ -67,7 +67,10 @@ function addMonths(iso, months) {
   const target = new Date(d.getFullYear(), d.getMonth() + months, 1);
   const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
   target.setDate(Math.min(originalDay, last));
-  return target.toISOString().slice(0, 10);
+  const year = target.getFullYear();
+  const month = String(target.getMonth() + 1).padStart(2, "0");
+  const day = String(target.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 function nextAction(record) {
   if (record.followUpRequired && record.followUpDate) return record.followUpDate;

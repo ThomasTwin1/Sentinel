@@ -7,13 +7,13 @@
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; worker-src 'self'; manifest-src 'self'" />
   <meta name="theme-color" content="#183b2b" />
-  <meta name="sentinel-release" content="0.7.1" />
+  <meta name="sentinel-release" content="0.8.0" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Sentinel Tracker" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <title>Sentinel No-Sign-In Session Test Edition v0.7.1</title>
+  <title>Sentinel No-Sign-In Session Test Edition v0.8.0</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -93,6 +93,7 @@
     <button class="tab active" data-tab="fpar-dashboard">FPAR Dashboard</button>
     <button class="tab" data-tab="milsans-dashboard">MILSANS Dashboard</button>
     <button class="tab" data-tab="inspection-schedule">Inspection Schedule</button>
+    <button class="tab" data-tab="operations">Operations Hub</button>
     <button class="tab" data-tab="calendar">Business Calendar</button>
     <button class="tab" data-tab="test-guide">Test Guide</button>
   </nav>
@@ -743,6 +744,169 @@
       </div>
     </section>
 
+    <section id="operations" class="tab-panel">
+      <div class="operations-hero">
+        <div>
+          <p class="eyebrow">SESSION-ONLY WORKFLOW PROTOTYPE</p>
+          <h2>Operations Hub</h2>
+          <p>Follow recurring deficiencies, work orders, inspector folders, extension requests, accountable items, and local FPAR alerts without changing the existing Sentinel dashboards.</p>
+        </div>
+        <div class="operations-profile-control">
+          <label for="operationsProfile">Test profile</label>
+          <select id="operationsProfile" aria-describedby="operationsProfileStatus"></select>
+          <p id="operationsProfileStatus" class="operations-profile-status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="operations-disclaimer" role="note">
+        <strong>Prototype boundary:</strong> Test profiles are fictional and are not authentication, permissions, or an official roster. All Operations Hub changes stay in this tab and are cleared by Reset Demo, refresh, or closing the tab. Use synthetic test data only.
+      </div>
+
+      <div id="operationsSummary" class="operations-summary" aria-label="Operations summary"></div>
+
+      <div class="operations-layout">
+        <article class="operations-card operations-card-wide">
+          <div class="operations-card-heading">
+            <div>
+              <p class="eyebrow">FACILITY FOLLOW-THROUGH</p>
+              <h3>Deficiencies &amp; Work Orders</h3>
+            </div>
+            <span class="prototype-chip">Session only</span>
+          </div>
+          <p class="muted">An open deficiency carries forward until someone explicitly marks it resolved. Completing a work order does not verify that the deficiency is fixed.</p>
+          <form id="deficiencyForm" class="operations-form">
+            <div>
+              <label for="deficiencyFacility">Facility *</label>
+              <select id="deficiencyFacility" required></select>
+            </div>
+            <div>
+              <label for="deficiencyWorkOrder">Work order reference</label>
+              <input id="deficiencyWorkOrder" type="text" maxlength="40" placeholder="Example: WO-DEMO-104" />
+            </div>
+            <div class="full-width">
+              <label for="deficiencyDescription">Deficiency summary *</label>
+              <input id="deficiencyDescription" type="text" maxlength="180" required placeholder="Synthetic test description" />
+            </div>
+            <label class="operations-check full-width" for="deficiencyRecurring">
+              <input id="deficiencyRecurring" type="checkbox" />
+              Mark as recurring / carry forward until verified fixed
+            </label>
+            <div class="full-width"><button class="button primary" type="submit">Add Deficiency</button></div>
+          </form>
+          <div id="deficiencyList" class="operations-list" aria-live="polite"></div>
+        </article>
+
+        <article class="operations-card operations-card-wide">
+          <div class="operations-card-heading">
+            <div>
+              <p class="eyebrow">INSPECTOR WORKSPACE</p>
+              <h3>Weekly / Monthly / Quarterly Folders</h3>
+            </div>
+          </div>
+          <p class="muted">These are filtered planning queues, not stored folders or access controls. Switching test profiles only changes this view.</p>
+          <div id="operationsCadenceFilter" class="cadence-filter" role="group" aria-label="Folder cadence">
+            <button class="button small primary" type="button" data-cadence="WEEKLY" aria-pressed="true">Weekly</button>
+            <button class="button small secondary" type="button" data-cadence="MONTHLY" aria-pressed="false">Monthly</button>
+            <button class="button small secondary" type="button" data-cadence="QUARTERLY" aria-pressed="false">Quarterly</button>
+          </div>
+          <form id="operationsAssignmentForm" class="operations-form compact">
+            <div>
+              <label for="assignmentFacility">Facility</label>
+              <select id="assignmentFacility" required></select>
+            </div>
+            <div>
+              <label for="assignmentProfile">Assign to test profile</label>
+              <select id="assignmentProfile" required></select>
+            </div>
+            <div class="full-width"><button class="button primary" type="submit">Update Assignment</button></div>
+          </form>
+          <div id="operationsFolderList" class="operations-list" aria-live="polite"></div>
+        </article>
+
+        <article class="operations-card">
+          <div class="operations-card-heading">
+            <div>
+              <p class="eyebrow">FACILITY REQUESTS</p>
+              <h3>Extension Requests</h3>
+            </div>
+          </div>
+          <p class="muted">Planning metadata only. A request shown here is not approval and does not change an inspection due date. No file is uploaded.</p>
+          <form id="extensionForm" class="operations-form single-column">
+            <div>
+              <label for="extensionFacility">Facility *</label>
+              <select id="extensionFacility" required></select>
+            </div>
+            <div>
+              <label for="extensionThroughDate">Requested through *</label>
+              <input id="extensionThroughDate" type="date" required />
+            </div>
+            <div>
+              <label for="extensionReason">Reason *</label>
+              <input id="extensionReason" type="text" maxlength="180" required placeholder="Synthetic planning note" />
+            </div>
+            <div>
+              <label for="extensionAttachmentName">Reference filename (metadata only)</label>
+              <input id="extensionAttachmentName" type="text" maxlength="80" placeholder="example-extension-request.pdf" />
+            </div>
+            <button class="button primary" type="submit">Add Pending Request</button>
+          </form>
+          <div id="extensionList" class="operations-list" aria-live="polite"></div>
+        </article>
+
+        <article class="operations-card">
+          <div class="operations-card-heading">
+            <div>
+              <p class="eyebrow">ACCOUNTABILITY TEST</p>
+              <h3>Sign-Out Roster</h3>
+            </div>
+          </div>
+          <p class="muted">Fictional roster and item labels only. “GEM Card” preserves the wording from the planning note and can be renamed after the team confirms its meaning.</p>
+          <div class="roster-control">
+            <div>
+              <span class="operations-label">Current profile roster status</span>
+              <strong id="rosterStatus" aria-live="polite"></strong>
+            </div>
+            <button id="rosterToggleBtn" class="button secondary" type="button">Sign Out</button>
+          </div>
+          <div id="assetCheckoutList" class="operations-list" aria-live="polite"></div>
+        </article>
+
+        <article class="operations-card">
+          <div class="operations-card-heading">
+            <div>
+              <p class="eyebrow">VERIFY BEFORE USE</p>
+              <h3>Regulations &amp; Local Reference Helper</h3>
+            </div>
+          </div>
+          <p class="muted">Fixed official links open outside Sentinel. Confirm the current publication and local policy before acting.</p>
+          <ul class="regulation-links">
+            <li><a href="https://armypubs.army.mil/epubs/DR_pubs/DR_a/pdf/web/ARN15052_TB_MED_530_FINAL.pdf" target="_blank" rel="noopener noreferrer">Army Publishing Directorate — TB MED 530</a></li>
+            <li><a href="https://www.fda.gov/food/fda-food-code/food-code-2022" target="_blank" rel="noopener noreferrer">FDA — Food Code 2022</a></li>
+            <li><a href="https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-117" target="_blank" rel="noopener noreferrer">eCFR — 21 CFR Part 117</a></li>
+          </ul>
+          <div class="local-reference-box">
+            <label for="referenceQuery">Local reference topic</label>
+            <div class="reference-query-row">
+              <input id="referenceQuery" type="text" maxlength="80" placeholder="Try: inspection frequency or food code" />
+              <button id="referenceSearchBtn" class="button secondary" type="button">Find Cited Reference</button>
+            </div>
+            <div id="referenceResult" class="reference-result" role="status" aria-live="polite">No query yet. This deterministic helper makes no network or external AI request and sends no record data.</div>
+          </div>
+        </article>
+
+        <article class="operations-card">
+          <div class="operations-card-heading">
+            <div>
+              <p class="eyebrow">LOCAL PLANNING AID</p>
+              <h3>FPAR Alert Center</h3>
+            </div>
+          </div>
+          <p class="muted">Alerts are calculated from the current session and as-of date. They are not authoritative deadlines or push notifications.</p>
+          <div id="operationsAlertList" class="operations-list" aria-live="polite"></div>
+        </article>
+      </div>
+    </section>
+
     <section id="test-guide" class="tab-panel">
       <div class="guide-card">
         <p class="eyebrow">USER ACCEPTANCE TESTING</p>
@@ -772,6 +936,7 @@
           <li><strong>DFAC summary filters:</strong> Tap A, B, C, F, and Follow-Up Required. Confirm the selected tile shows only matching facilities, and tap it again to show all facilities. Confirm a facility's letter grade still opens the exact inspection record.</li>
           <li><strong>No-sign-in mode:</strong> Reload Sentinel and confirm the fictional scenario opens without a passphrase prompt, the three CSV import controls are available, and Reset Demo clears session changes and returns to the FPAR Dashboard without showing a sign-in screen.</li>
           <li><strong>Inspection Schedule:</strong> Open Inspection Schedule, choose a date range, filter FPAR or MILSANS, search for a fictional facility, and confirm the rows remain date ordered. Select Print Inspection Schedule and confirm only the filtered schedule appears in print preview.</li>
+          <li><strong>Operations Hub:</strong> Switch fictional test profiles; assign a facility; add and explicitly resolve a recurring deficiency; complete its work order separately; filter Weekly, Monthly, and Quarterly queues; add an extension-request filename as metadata; sign the profile and a duty phone out and back in; confirm the local reference result includes a fixed citation; then use Reset Demo and confirm all changes return to the fictional starting scenario.</li>
           <li><strong>Encrypted-vault compatibility:</strong> The automated security suite continues to verify encrypted backup and restore behavior, but those controls are not exposed in no-sign-in session mode.</li>
         </ol>
         <div class="callout">
