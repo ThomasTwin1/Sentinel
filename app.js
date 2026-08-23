@@ -17,8 +17,39 @@
     BIANNUAL: { label: "Biannual", dueSoon: 30 },
     ANNUAL: { label: "Annual", dueSoon: 60 }
   };
+  const OPERATIONS_PROFILES = [
+    { id: "inspector-alpha", name: "Inspector Alpha", role: "Inspector" },
+    { id: "inspector-bravo", name: "Inspector Bravo", role: "Inspector" },
+    { id: "inspector-charlie", name: "Inspector Charlie", role: "Inspector" },
+    { id: "coordinator-delta", name: "Coordinator Delta", role: "Coordinator" }
+  ];
+  const OPERATIONS_CADENCES = ["WEEKLY", "MONTHLY", "QUARTERLY"];
+  const MAX_OPERATIONS_RECORDS = 200;
+  const LOCAL_REFERENCES = [
+    {
+      keywords: ["tb med", "army", "frequency", "inspection", "fpar", "sanitation"],
+      title: "Army Publishing Directorate — TB MED 530",
+      url: "https://armypubs.army.mil/epubs/DR_pubs/DR_a/pdf/web/ARN15052_TB_MED_530_FINAL.pdf",
+      note: "Review the official publication for military food-service sanitation policy and verify current local supplements."
+    },
+    {
+      keywords: ["food code", "retail", "food service", "temperature", "employee health"],
+      title: "U.S. Food and Drug Administration — Food Code 2022",
+      url: "https://www.fda.gov/food/fda-food-code/food-code-2022",
+      note: "Review the FDA Food Code and its current supplement as model guidance, then verify the rules adopted for the facility."
+    },
+    {
+      keywords: ["cfr", "hazard", "manufacturing", "preventive", "regulation"],
+      title: "eCFR — 21 CFR Part 117",
+      url: "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-117",
+      note: "Review the current eCFR text for applicable federal requirements and verify which provisions govern the facility."
+    }
+  ];
 
   let state = emptyState();
+  let operationsState = emptyOperationsState();
+  let activeOperationsProfileId = OPERATIONS_PROFILES[0].id;
+  let operationsCadence = "WEEKLY";
   let vault;
   let vaultUnlocked = false;
   let conferenceDemoMode = false;
@@ -67,6 +98,9 @@
       "milsansSummaryCards", "milsansRatingKey", "milsansDescription", "milsansRecordCount", "milsansTableBody", "milsansResults",
       "milsansDueSummaryCards", "milsansDueRatingFilter", "milsansDueStatusFilter", "milsansDueMonthFilter", "milsansDueInspectorFilter", "milsansDueSortMode", "milsansDueDescription", "milsansDueRecordCount", "milsansDueTableBody", "milsansDueRequirements",
       "scheduleStartDate", "scheduleEndDate", "scheduleSourceFilter", "scheduleSearch", "schedule30DaysBtn", "schedule90DaysBtn", "printInspectionScheduleBtn", "scheduleSummary", "scheduleDescription", "scheduleRecordCount", "scheduleTableBody",
+      "operationsProfile", "operationsProfileStatus", "operationsSummary", "deficiencyForm", "deficiencyFacility", "deficiencyDescription", "deficiencyRecurring", "deficiencyWorkOrder", "deficiencyList",
+      "operationsCadenceFilter", "operationsAssignmentForm", "assignmentFacility", "assignmentProfile", "operationsFolderList", "extensionForm", "extensionFacility", "extensionThroughDate", "extensionReason", "extensionAttachmentName", "extensionList",
+      "rosterStatus", "rosterToggleBtn", "assetCheckoutList", "referenceQuery", "referenceSearchBtn", "referenceResult", "operationsAlertList",
       "quickScrollControls", "scrollToTopBtn", "scrollToBottomBtn", "toast"
       , "securityGate", "securityGateTitle", "securityGateDescription", "securityForm", "securityPassphrase", "securityConfirmRow", "securityPassphraseConfirm",
       "securityLegacyNotice", "securityError", "securitySubmitBtn", "openDemoModeBtn", "deleteVaultBtn", "lockBtn", "vaultStatus",
@@ -106,6 +140,23 @@
     els.schedule90DaysBtn.addEventListener("click", () => setScheduleWindow(90));
     els.printInspectionScheduleBtn.addEventListener("click", printInspectionSchedule);
 
+    els.operationsProfile.addEventListener("change", switchOperationsProfile);
+    els.deficiencyForm.addEventListener("submit", saveDeficiency);
+    els.deficiencyList.addEventListener("click", handleDeficiencyAction);
+    els.operationsCadenceFilter.addEventListener("click", changeOperationsCadence);
+    els.operationsAssignmentForm.addEventListener("submit", saveOperationsAssignment);
+    els.extensionForm.addEventListener("submit", saveExtensionRequest);
+    els.extensionList.addEventListener("click", handleExtensionAction);
+    els.rosterToggleBtn.addEventListener("click", toggleRosterStatus);
+    els.assetCheckoutList.addEventListener("click", handleAssetAction);
+    els.referenceSearchBtn.addEventListener("click", answerLocalReference);
+    els.referenceQuery.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        answerLocalReference();
+      }
+    });
+
     els.summaryCards.addEventListener("click", handleDashboardShortcutClick);
     els.statusKeyGrid.addEventListener("click", handleDashboardShortcutClick);
 
@@ -118,6 +169,7 @@
         renderDashboard();
         renderMilsansDueDashboard();
         renderMilsans();
+        renderOperationsHub();
       });
     });
 
@@ -129,6 +181,7 @@
         renderDashboard();
         renderMilsansDueDashboard();
         renderMilsans();
+        renderOperationsHub();
       });
     });
 
@@ -184,6 +237,16 @@
 
   function emptyState() {
     return { schemaVersion: 1, facilities: [], customHolidays: [], milsansInspections: [], audit: [] };
+  }
+
+  function emptyOperationsState() {
+    return {
+      deficiencies: [],
+      assignments: [],
+      extensionRequests: [],
+      roster: [],
+      assets: []
+    };
   }
 
   function normalizePersistedState(parsed) {
@@ -482,6 +545,7 @@
     vault.lock();
     vaultUnlocked = false;
     state = emptyState();
+    operationsState = emptyOperationsState();
     if (els.inspectionDialog.open) els.inspectionDialog.close();
     els.facilityForm.reset();
     els.inspectionForm.reset();
@@ -497,6 +561,7 @@
     conferenceDemoMode = true;
     gradeBoardFilter = "";
     state = buildFictionalDemoState(startOfDay(new Date()));
+    resetOperationsState();
     els.securityGate.hidden = true;
     setApplicationInert(false);
     document.body.classList.remove("vault-locked");
@@ -525,6 +590,7 @@
     conferenceDemoMode = false;
     gradeBoardFilter = "";
     state = emptyState();
+    operationsState = emptyOperationsState();
     document.body.classList.remove("conference-demo-mode");
     setImportControlsDisabled(false);
     setBackupControlsDisabled(false);
@@ -660,6 +726,7 @@
     vault.deleteVault();
     localStorage.removeItem(LEGACY_STORAGE_KEY);
     state = emptyState();
+    operationsState = emptyOperationsState();
     vaultUnlocked = false;
     showSecurityGate("setup", "The local vault was deleted.");
   }
@@ -693,7 +760,557 @@
     renderFacilities();
     renderHolidays();
     renderMilsans();
+    renderOperationsHub();
     window.requestAnimationFrame(updateQuickScrollControls);
+  }
+
+  function resetOperationsState(today = startOfDay(new Date())) {
+    activeOperationsProfileId = OPERATIONS_PROFILES[0].id;
+    operationsCadence = "WEEKLY";
+    operationsState = buildFictionalOperationsState(today);
+    els.deficiencyForm?.reset();
+    els.operationsAssignmentForm?.reset();
+    els.extensionForm?.reset();
+    if (els.referenceQuery) els.referenceQuery.value = "";
+    if (els.referenceResult) {
+      els.referenceResult.textContent = "No query yet. This deterministic helper makes no network or external AI request and sends no record data.";
+    }
+  }
+
+  function buildFictionalOperationsState(today) {
+    const assignments = state.facilities.map(facility => ({
+      facilityKey: operationsFacilityKey(facility),
+      profileId: operationsProfileForInspector(facility.assignedInspector).id
+    }));
+    const deficiencies = [];
+    const freedom = state.facilities.find(facility => facility.name === "Freedom Dining Facility");
+    const patriot = state.facilities.find(facility => facility.name === "Patriot Commissary");
+    if (freedom) {
+      deficiencies.push({
+        id: "demo-deficiency-freedom",
+        facilityKey: operationsFacilityKey(freedom),
+        description: "Fictional repeat seal gap at the demo receiving door",
+        recurring: true,
+        lastObservedDate: toISO(addDays(today, -8)),
+        status: "OPEN",
+        resolvedDate: null,
+        workOrderReference: "WO-DEMO-104",
+        workOrderStatus: "PENDING"
+      });
+    }
+    if (patriot) {
+      deficiencies.push({
+        id: "demo-deficiency-patriot",
+        facilityKey: operationsFacilityKey(patriot),
+        description: "Fictional damaged cove-base section used for workflow testing",
+        recurring: false,
+        lastObservedDate: toISO(addDays(today, -19)),
+        status: "OPEN",
+        resolvedDate: null,
+        workOrderReference: "",
+        workOrderStatus: "NONE"
+      });
+    }
+
+    const liberty = state.facilities.find(facility => facility.name === "Liberty Exchange Food Court");
+    const extensionRequests = liberty ? [{
+      id: "demo-extension-liberty",
+      facilityKey: operationsFacilityKey(liberty),
+      requestedThroughDate: toISO(addDays(today, 14)),
+      reason: "Fictional renovation-access planning scenario",
+      attachmentName: "demo-extension-request.pdf",
+      status: "PENDING",
+      requestedDate: toISO(today)
+    }] : [];
+
+    return {
+      deficiencies,
+      assignments,
+      extensionRequests,
+      roster: OPERATIONS_PROFILES.map(profile => ({
+        profileId: profile.id,
+        status: profile.id === "inspector-bravo" ? "OUT" : "IN",
+        changedAt: profile.id === "inspector-bravo" ? new Date().toISOString() : null
+      })),
+      assets: [
+        { id: "asset-duty-phone", label: "Duty Phone 1", holderProfileId: "inspector-bravo", checkedOutAt: new Date().toISOString() },
+        { id: "asset-gem-cards", label: "GEM Card Set (label to confirm)", holderProfileId: null, checkedOutAt: null },
+        { id: "asset-roster-kit", label: "Inspection Roster Kit", holderProfileId: null, checkedOutAt: null }
+      ]
+    };
+  }
+
+  function operationsFacilityKey(facility) {
+    return `${normalize(facility.installation)}|${normalize(facility.name)}`;
+  }
+
+  function operationsFacilityByKey(facilityKey) {
+    return state.facilities.find(facility => operationsFacilityKey(facility) === facilityKey) || null;
+  }
+
+  function operationsProfileById(profileId) {
+    return OPERATIONS_PROFILES.find(profile => profile.id === profileId) || null;
+  }
+
+  function operationsProfileForInspector(inspector) {
+    const normalizedInspector = normalize(inspector);
+    return OPERATIONS_PROFILES.find(profile => normalize(profile.name) === normalizedInspector)
+      || OPERATIONS_PROFILES[0];
+  }
+
+  function reconcileOperationsState() {
+    if (!operationsState || typeof operationsState !== "object") operationsState = emptyOperationsState();
+    const validFacilityKeys = new Set(state.facilities.map(operationsFacilityKey));
+    const validProfileIds = new Set(OPERATIONS_PROFILES.map(profile => profile.id));
+    operationsState.deficiencies = Array.isArray(operationsState.deficiencies)
+      ? operationsState.deficiencies.filter(record => validFacilityKeys.has(record.facilityKey)).slice(0, MAX_OPERATIONS_RECORDS)
+      : [];
+    operationsState.extensionRequests = Array.isArray(operationsState.extensionRequests)
+      ? operationsState.extensionRequests.filter(record => validFacilityKeys.has(record.facilityKey)).slice(0, MAX_OPERATIONS_RECORDS)
+      : [];
+    operationsState.assignments = Array.isArray(operationsState.assignments)
+      ? operationsState.assignments.filter(record => validFacilityKeys.has(record.facilityKey) && validProfileIds.has(record.profileId))
+      : [];
+    state.facilities.forEach(facility => {
+      const facilityKey = operationsFacilityKey(facility);
+      if (!operationsState.assignments.some(record => record.facilityKey === facilityKey)) {
+        operationsState.assignments.push({
+          facilityKey,
+          profileId: operationsProfileForInspector(facility.assignedInspector).id
+        });
+      }
+    });
+    operationsState.assignments = operationsState.assignments.slice(0, MAX_OPERATIONS_RECORDS);
+    operationsState.roster = Array.isArray(operationsState.roster)
+      ? operationsState.roster.filter(record => validProfileIds.has(record.profileId))
+      : [];
+    OPERATIONS_PROFILES.forEach(profile => {
+      if (!operationsState.roster.some(record => record.profileId === profile.id)) {
+        operationsState.roster.push({ profileId: profile.id, status: "IN", changedAt: null });
+      }
+    });
+    operationsState.assets = Array.isArray(operationsState.assets)
+      ? operationsState.assets.slice(0, 20).map(asset => ({
+        ...asset,
+        holderProfileId: validProfileIds.has(asset.holderProfileId) ? asset.holderProfileId : null,
+        checkedOutAt: validProfileIds.has(asset.holderProfileId) ? asset.checkedOutAt : null
+      }))
+      : [];
+  }
+
+  function renderOperationsHub() {
+    if (!els.operationsSummary) return;
+    reconcileOperationsState();
+    renderOperationsSelects();
+    renderOperationsSummary();
+    renderDeficiencies();
+    renderOperationsFolders();
+    renderExtensionRequests();
+    renderAccountabilityBoard();
+    renderOperationsAlerts();
+  }
+
+  function renderOperationsSelects() {
+    const profileOptions = OPERATIONS_PROFILES.map(profile => ({
+      value: profile.id,
+      label: `${profile.name} — ${profile.role}`
+    }));
+    setOperationsSelectOptions(els.operationsProfile, profileOptions, activeOperationsProfileId);
+    setOperationsSelectOptions(els.assignmentProfile, profileOptions, els.assignmentProfile.value || activeOperationsProfileId);
+    const facilityOptions = [...state.facilities]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(facility => ({
+        value: operationsFacilityKey(facility),
+        label: `${facility.name} — ${facility.installation}`
+      }));
+    setOperationsSelectOptions(els.deficiencyFacility, facilityOptions, els.deficiencyFacility.value);
+    setOperationsSelectOptions(els.assignmentFacility, facilityOptions, els.assignmentFacility.value);
+    setOperationsSelectOptions(els.extensionFacility, facilityOptions, els.extensionFacility.value);
+    els.extensionThroughDate.min = toISO(asOfDate);
+
+    const profile = operationsProfileById(activeOperationsProfileId) || OPERATIONS_PROFILES[0];
+    els.operationsProfileStatus.textContent = `Testing as ${profile.name} • workload filter only, not authentication or permissions.`;
+  }
+
+  function setOperationsSelectOptions(select, options, preferredValue) {
+    if (!select) return;
+    select.innerHTML = options.length
+      ? options.map(option => `<option value="${escapeAttr(option.value)}">${escapeHtml(option.label)}</option>`).join("")
+      : `<option value="">No facilities available</option>`;
+    if (options.some(option => option.value === preferredValue)) select.value = preferredValue;
+    select.disabled = !options.length;
+  }
+
+  function renderOperationsSummary() {
+    const openDeficiencies = operationsState.deficiencies.filter(record => record.status === "OPEN").length;
+    const pendingWorkOrders = operationsState.deficiencies.filter(record => record.workOrderStatus === "PENDING").length;
+    const alertCount = buildOperationsAlerts().length;
+    const checkedOut = operationsState.assets.filter(asset => asset.holderProfileId).length;
+    els.operationsSummary.innerHTML = [
+      [openDeficiencies, "Open deficiencies", "deficiency"],
+      [pendingWorkOrders, "Pending work orders", "work-order"],
+      [alertCount, "Local FPAR alerts", "alert"],
+      [checkedOut, "Items checked out", "asset"]
+    ].map(([value, label, className]) => `
+      <div class="operations-stat ${className}">
+        <span>${escapeHtml(label)}</span>
+        <strong>${value}</strong>
+      </div>
+    `).join("");
+  }
+
+  function renderDeficiencies() {
+    const records = [...operationsState.deficiencies].sort((a, b) =>
+      Number(a.status === "RESOLVED") - Number(b.status === "RESOLVED")
+      || String(b.lastObservedDate).localeCompare(String(a.lastObservedDate))
+    );
+    if (!records.length) {
+      els.deficiencyList.innerHTML = `<div class="operations-empty">No deficiency records in this session.</div>`;
+      return;
+    }
+    els.deficiencyList.innerHTML = records.map(record => {
+      const facility = operationsFacilityByKey(record.facilityKey);
+      const open = record.status === "OPEN";
+      const hasWorkOrder = record.workOrderStatus !== "NONE";
+      return `
+        <div class="operations-list-item ${open ? "open" : "closed"}">
+          <div class="operations-item-heading">
+            <div>
+              <h4>${escapeHtml(facility?.name || "Removed facility")}</h4>
+              <p>${escapeHtml(record.description)}</p>
+            </div>
+            <span class="badge ${open ? "overdue" : "upcoming"}">${open ? "Open" : "Resolved"}</span>
+          </div>
+          <div class="operations-meta">
+            <span>Last observed: ${escapeHtml(record.lastObservedDate)}</span>
+            <span>${record.recurring ? "Recurring / carries forward" : "Single occurrence"}</span>
+            ${hasWorkOrder ? `<span>Work order ${escapeHtml(record.workOrderReference)}: ${escapeHtml(record.workOrderStatus.toLowerCase())}</span>` : `<span>No work order linked</span>`}
+          </div>
+          <div class="operations-actions">
+            <button class="button small secondary" type="button" data-operations-action="${open ? "resolve" : "reopen"}" data-id="${escapeAttr(record.id)}">${open ? "Mark Verified Fixed" : "Reopen"}</button>
+            ${hasWorkOrder ? `<button class="button small secondary" type="button" data-operations-action="${record.workOrderStatus === "PENDING" ? "complete-work-order" : "reopen-work-order"}" data-id="${escapeAttr(record.id)}">${record.workOrderStatus === "PENDING" ? "Complete Work Order" : "Reopen Work Order"}</button>` : ""}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function saveDeficiency(event) {
+    event.preventDefault();
+    if (operationsState.deficiencies.length >= MAX_OPERATIONS_RECORDS) {
+      showToast("The session deficiency limit has been reached.");
+      return;
+    }
+    const facilityKey = els.deficiencyFacility.value;
+    if (!operationsFacilityByKey(facilityKey)) {
+      showToast("Choose a valid facility.");
+      return;
+    }
+    try {
+      const description = boundedOperationsText(els.deficiencyDescription.value, "Deficiency summary", 180, true);
+      const workOrderReference = boundedOperationsText(els.deficiencyWorkOrder.value, "Work order reference", 40);
+      operationsState.deficiencies.push({
+        id: crypto.randomUUID(),
+        facilityKey,
+        description,
+        recurring: els.deficiencyRecurring.checked,
+        lastObservedDate: toISO(asOfDate),
+        status: "OPEN",
+        resolvedDate: null,
+        workOrderReference,
+        workOrderStatus: workOrderReference ? "PENDING" : "NONE"
+      });
+      els.deficiencyForm.reset();
+      renderOperationsHub();
+      showToast("Session deficiency added. It will remain open until explicitly resolved.");
+    } catch (error) {
+      showToast(error.message);
+    }
+  }
+
+  function handleDeficiencyAction(event) {
+    const button = event.target.closest("[data-operations-action]");
+    if (!button) return;
+    const record = operationsState.deficiencies.find(item => item.id === button.dataset.id);
+    if (!record) return;
+    if (button.dataset.operationsAction === "resolve") {
+      record.status = "RESOLVED";
+      record.resolvedDate = toISO(asOfDate);
+      showToast("Deficiency marked verified fixed. Any work order status was left unchanged.");
+    } else if (button.dataset.operationsAction === "reopen") {
+      record.status = "OPEN";
+      record.resolvedDate = null;
+      record.lastObservedDate = toISO(asOfDate);
+      showToast("Deficiency reopened.");
+    } else if (button.dataset.operationsAction === "complete-work-order") {
+      record.workOrderStatus = "COMPLETE";
+      showToast("Work order completed. The deficiency still requires separate verification.");
+    } else if (button.dataset.operationsAction === "reopen-work-order") {
+      record.workOrderStatus = "PENDING";
+      showToast("Work order returned to pending.");
+    }
+    renderOperationsHub();
+  }
+
+  function switchOperationsProfile() {
+    if (!operationsProfileById(els.operationsProfile.value)) return;
+    activeOperationsProfileId = els.operationsProfile.value;
+    renderOperationsHub();
+    showToast("Test profile changed. This does not grant or restrict access.");
+  }
+
+  function changeOperationsCadence(event) {
+    const button = event.target.closest("[data-cadence]");
+    if (!button || !OPERATIONS_CADENCES.includes(button.dataset.cadence)) return;
+    operationsCadence = button.dataset.cadence;
+    renderOperationsFolders();
+  }
+
+  function renderOperationsFolders() {
+    els.operationsCadenceFilter.querySelectorAll("[data-cadence]").forEach(button => {
+      const active = button.dataset.cadence === operationsCadence;
+      button.setAttribute("aria-pressed", String(active));
+      button.classList.toggle("primary", active);
+      button.classList.toggle("secondary", !active);
+    });
+    const matchingAssignments = operationsState.assignments
+      .filter(record => record.profileId === activeOperationsProfileId)
+      .map(record => ({ record, facility: operationsFacilityByKey(record.facilityKey) }))
+      .filter(item => item.facility?.active && item.facility.frequency === operationsCadence)
+      .sort((a, b) => compareBuildingNumbers(a.facility.buildingNumber, b.facility.buildingNumber) || a.facility.name.localeCompare(b.facility.name));
+    if (!matchingAssignments.length) {
+      els.operationsFolderList.innerHTML = `<div class="operations-empty">No ${escapeHtml(FREQUENCIES[operationsCadence].label.toLowerCase())} facilities assigned to this test profile.</div>`;
+      return;
+    }
+    els.operationsFolderList.innerHTML = matchingAssignments.map(({ record, facility }) => {
+      const open = operationsState.deficiencies.filter(item => item.facilityKey === record.facilityKey && item.status === "OPEN").length;
+      const pending = operationsState.deficiencies.filter(item => item.facilityKey === record.facilityKey && item.workOrderStatus === "PENDING").length;
+      const schedule = calculateSchedule(facility, asOfDate, state.customHolidays);
+      return `
+        <div class="operations-list-item folder-item">
+          <div class="operations-item-heading">
+            <div><h4>${escapeHtml(facility.name)}</h4><p>${escapeHtml(facility.installation)} • Building ${escapeHtml(facility.buildingNumber)}</p></div>
+            <span class="badge ${statusClass(schedule.status)}">${escapeHtml(statusLabel(schedule.status))}</span>
+          </div>
+          <div class="operations-meta"><span>${open} open ${open === 1 ? "deficiency" : "deficiencies"}</span><span>${pending} pending ${pending === 1 ? "work order" : "work orders"}</span></div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function saveOperationsAssignment(event) {
+    event.preventDefault();
+    const facilityKey = els.assignmentFacility.value;
+    const profileId = els.assignmentProfile.value;
+    const facility = operationsFacilityByKey(facilityKey);
+    const profile = operationsProfileById(profileId);
+    if (!facility || !profile) {
+      showToast("Choose a valid facility and test profile.");
+      return;
+    }
+    const existing = operationsState.assignments.find(record => record.facilityKey === facilityKey);
+    if (existing) existing.profileId = profileId;
+    else operationsState.assignments.push({ facilityKey, profileId });
+    activeOperationsProfileId = profileId;
+    renderOperationsHub();
+    showToast(`${facility.name} assigned to ${profile.name} for this session.`);
+  }
+
+  function renderExtensionRequests() {
+    const records = [...operationsState.extensionRequests].sort((a, b) =>
+      Number(a.status !== "PENDING") - Number(b.status !== "PENDING")
+      || a.requestedThroughDate.localeCompare(b.requestedThroughDate)
+    );
+    if (!records.length) {
+      els.extensionList.innerHTML = `<div class="operations-empty">No extension requests in this session.</div>`;
+      return;
+    }
+    els.extensionList.innerHTML = records.map(record => {
+      const facility = operationsFacilityByKey(record.facilityKey);
+      const pending = record.status === "PENDING";
+      return `
+        <div class="operations-list-item ${pending ? "open" : "closed"}">
+          <div class="operations-item-heading">
+            <div><h4>${escapeHtml(facility?.name || "Removed facility")}</h4><p>${escapeHtml(record.reason)}</p></div>
+            <span class="badge ${pending ? "soon" : "inactive"}">${pending ? "Pending" : "Withdrawn"}</span>
+          </div>
+          <div class="operations-meta"><span>Requested through: ${escapeHtml(record.requestedThroughDate)}</span><span>Reference metadata: ${escapeHtml(record.attachmentName || "None")}</span></div>
+          <div class="operations-actions"><button class="button small secondary" type="button" data-extension-action="${pending ? "withdraw" : "reopen"}" data-id="${escapeAttr(record.id)}">${pending ? "Withdraw Request" : "Reopen Request"}</button></div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function saveExtensionRequest(event) {
+    event.preventDefault();
+    if (operationsState.extensionRequests.length >= MAX_OPERATIONS_RECORDS) {
+      showToast("The session extension-request limit has been reached.");
+      return;
+    }
+    const facilityKey = els.extensionFacility.value;
+    if (!operationsFacilityByKey(facilityKey)) {
+      showToast("Choose a valid facility.");
+      return;
+    }
+    try {
+      const requestedThroughDate = validOperationsDate(els.extensionThroughDate.value, "Requested-through date");
+      if (parseISO(requestedThroughDate) < startOfDay(asOfDate)) {
+        throw new Error("Requested-through date cannot be earlier than the current as-of date.");
+      }
+      const reason = boundedOperationsText(els.extensionReason.value, "Extension reason", 180, true);
+      const rawAttachmentName = boundedOperationsText(els.extensionAttachmentName.value, "Reference filename", 80);
+      const attachmentName = rawAttachmentName.split(/[\\/]/).pop();
+      operationsState.extensionRequests.push({
+        id: crypto.randomUUID(),
+        facilityKey,
+        requestedThroughDate,
+        reason,
+        attachmentName,
+        status: "PENDING",
+        requestedDate: toISO(asOfDate)
+      });
+      els.extensionForm.reset();
+      renderOperationsHub();
+      showToast("Pending request metadata added. No file was read or uploaded.");
+    } catch (error) {
+      showToast(error.message);
+    }
+  }
+
+  function handleExtensionAction(event) {
+    const button = event.target.closest("[data-extension-action]");
+    if (!button) return;
+    const record = operationsState.extensionRequests.find(item => item.id === button.dataset.id);
+    if (!record) return;
+    record.status = button.dataset.extensionAction === "withdraw" ? "WITHDRAWN" : "PENDING";
+    renderOperationsHub();
+    showToast(record.status === "PENDING" ? "Extension request returned to pending." : "Extension request withdrawn. Due dates were not changed.");
+  }
+
+  function renderAccountabilityBoard() {
+    const profile = operationsProfileById(activeOperationsProfileId) || OPERATIONS_PROFILES[0];
+    const rosterEntry = operationsState.roster.find(record => record.profileId === profile.id);
+    const signedOut = rosterEntry?.status === "OUT";
+    els.rosterStatus.textContent = `${profile.name}: ${signedOut ? "Signed out" : "Signed in"}`;
+    els.rosterToggleBtn.textContent = signedOut ? "Sign Back In" : "Sign Out";
+    els.assetCheckoutList.innerHTML = operationsState.assets.map(asset => {
+      const holder = operationsProfileById(asset.holderProfileId);
+      const heldByCurrent = asset.holderProfileId === activeOperationsProfileId;
+      return `
+        <div class="operations-list-item asset-item">
+          <div><h4>${escapeHtml(asset.label)}</h4><p>${holder ? `Checked out to ${escapeHtml(holder.name)}` : "Available"}</p></div>
+          ${holder && !heldByCurrent
+            ? `<span class="badge soon">In use</span>`
+            : `<button class="button small ${heldByCurrent ? "secondary" : "primary"}" type="button" data-asset-action="${heldByCurrent ? "return" : "checkout"}" data-id="${escapeAttr(asset.id)}">${heldByCurrent ? "Return" : "Check Out"}</button>`}
+        </div>
+      `;
+    }).join("") || `<div class="operations-empty">No fictional accountable items configured.</div>`;
+  }
+
+  function toggleRosterStatus() {
+    const rosterEntry = operationsState.roster.find(record => record.profileId === activeOperationsProfileId);
+    if (!rosterEntry) return;
+    rosterEntry.status = rosterEntry.status === "OUT" ? "IN" : "OUT";
+    rosterEntry.changedAt = new Date().toISOString();
+    renderOperationsHub();
+    showToast(`Test roster updated: ${rosterEntry.status === "OUT" ? "signed out" : "signed in"}.`);
+  }
+
+  function handleAssetAction(event) {
+    const button = event.target.closest("[data-asset-action]");
+    if (!button) return;
+    const asset = operationsState.assets.find(item => item.id === button.dataset.id);
+    if (!asset) return;
+    if (button.dataset.assetAction === "checkout") {
+      if (asset.holderProfileId) {
+        showToast("That item is already checked out.");
+        return;
+      }
+      asset.holderProfileId = activeOperationsProfileId;
+      asset.checkedOutAt = new Date().toISOString();
+      showToast("Fictional item checked out for this session.");
+    } else if (button.dataset.assetAction === "return" && asset.holderProfileId === activeOperationsProfileId) {
+      asset.holderProfileId = null;
+      asset.checkedOutAt = null;
+      showToast("Fictional item returned.");
+    }
+    renderOperationsHub();
+  }
+
+  function buildOperationsAlerts() {
+    const alerts = [];
+    const schedulePriority = { OVERDUE: 0, DUE_TODAY: 1, DUE_SOON: 2 };
+    state.facilities.filter(facility => facility.active).forEach(facility => {
+      const schedule = calculateSchedule(facility, asOfDate, state.customHolidays);
+      if (Object.hasOwn(schedulePriority, schedule.status)) {
+        alerts.push({
+          priority: schedulePriority[schedule.status],
+          facilityName: facility.name,
+          type: "Schedule",
+          message: `${statusLabel(schedule.status)} — ${schedule.nextDue ? toISO(schedule.nextDue) : "date unavailable"}`
+        });
+      }
+      if (facility.inaccessible) {
+        alerts.push({ priority: 1, facilityName: facility.name, type: "Access", message: "Facility is marked inaccessible" });
+      }
+    });
+    operationsState.deficiencies.filter(record => record.status === "OPEN").forEach(record => {
+      const facilityName = operationsFacilityByKey(record.facilityKey)?.name || "Removed facility";
+      alerts.push({ priority: 1, facilityName, type: "Deficiency", message: record.recurring ? "Recurring deficiency remains open" : "Deficiency remains open" });
+    });
+    operationsState.deficiencies.filter(record => record.workOrderStatus === "PENDING").forEach(record => {
+      const facilityName = operationsFacilityByKey(record.facilityKey)?.name || "Removed facility";
+      alerts.push({ priority: 2, facilityName, type: "Work order", message: `${record.workOrderReference} is pending` });
+    });
+    operationsState.extensionRequests.filter(record => record.status === "PENDING").forEach(record => {
+      const facilityName = operationsFacilityByKey(record.facilityKey)?.name || "Removed facility";
+      alerts.push({ priority: 3, facilityName, type: "Extension request", message: `Pending through ${record.requestedThroughDate}; due date unchanged` });
+    });
+    return alerts.sort((a, b) => a.priority - b.priority || a.facilityName.localeCompare(b.facilityName) || a.type.localeCompare(b.type));
+  }
+
+  function renderOperationsAlerts() {
+    const alerts = buildOperationsAlerts();
+    if (!alerts.length) {
+      els.operationsAlertList.innerHTML = `<div class="operations-empty">No local FPAR planning alerts at this as-of date.</div>`;
+      return;
+    }
+    els.operationsAlertList.innerHTML = alerts.map(alert => `
+      <div class="operations-list-item alert-item priority-${alert.priority}">
+        <div><h4>${escapeHtml(alert.facilityName)}</h4><p>${escapeHtml(alert.message)}</p></div>
+        <span class="prototype-chip">${escapeHtml(alert.type)}</span>
+      </div>
+    `).join("");
+  }
+
+  function answerLocalReference() {
+    const query = normalize(els.referenceQuery.value);
+    if (!query) {
+      els.referenceResult.textContent = "Enter a topic. No record data is sent anywhere.";
+      return;
+    }
+    const match = LOCAL_REFERENCES.find(reference => reference.keywords.some(keyword => query.includes(normalize(keyword))));
+    if (!match) {
+      els.referenceResult.innerHTML = "No local topic match. Open the fixed official links above and verify the current publication; this helper is not authoritative advice and does not call external AI.";
+      return;
+    }
+    els.referenceResult.innerHTML = `${escapeHtml(match.note)} <a href="${escapeAttr(match.url)}" target="_blank" rel="noopener noreferrer">Source: ${escapeHtml(match.title)}</a>`;
+  }
+
+  function boundedOperationsText(value, label, maxLength, required = false) {
+    const text = String(value ?? "").trim();
+    if (required && !text) throw new Error(`${label} is required.`);
+    if (text.length > maxLength) throw new Error(`${label} exceeds the ${maxLength}-character limit.`);
+    if (/\u0000/.test(text)) throw new Error(`${label} contains invalid content.`);
+    return text;
+  }
+
+  function validOperationsDate(value, label) {
+    const text = String(value || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(text) || toISO(parseISO(text)) !== text) {
+      throw new Error(`${label} must be a valid date.`);
+    }
+    return text;
   }
 
   function setScheduleWindow(days) {
@@ -1468,6 +2085,7 @@
       if (!confirm(replaceMessage)) return;
     }
     state = buildFictionalDemoState(startOfDay(new Date()));
+    resetOperationsState();
     if (SIGN_IN_DISABLED) els.vaultStatus.textContent = "No sign-in • fictional data";
     saveState();
     renderAll();
@@ -1479,6 +2097,7 @@
     if (!conferenceDemoMode && hasData && !confirm("Replace current local tracker data with the fictional conference scenario? Create an encrypted backup first if needed.")) return;
     gradeBoardFilter = "";
     state = buildFictionalDemoState(startOfDay(new Date()));
+    resetOperationsState();
     if (SIGN_IN_DISABLED) els.vaultStatus.textContent = "No sign-in • fictional data";
     if (!conferenceDemoMode) {
       addAudit("FICTIONAL_CONFERENCE_DEMO_LOADED", crypto.randomUUID(), null, {
@@ -2865,6 +3484,7 @@
         milsansInspections: state.milsansInspections || [],
         audit: state.audit || []
       };
+      resetOperationsState();
       markSessionImportActive();
 
       addAudit("FPAR_CSV_IMPORTED", crypto.randomUUID(), null, {
@@ -3402,6 +4022,16 @@
       UPCOMING: "upcoming",
       NO_HISTORY: "no-history"
     }[status] || "no-history";
+  }
+
+  function statusLabel(status) {
+    return {
+      OVERDUE: "Overdue",
+      DUE_TODAY: "Due Today",
+      DUE_SOON: "Due Soon",
+      UPCOMING: "Upcoming",
+      NO_HISTORY: "No History"
+    }[status] || status;
   }
 
   function statusBadge(status) {

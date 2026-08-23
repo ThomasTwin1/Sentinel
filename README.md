@@ -1,6 +1,6 @@
 # Sentinel
 
-> **No-sign-in session test edition (v0.7.1):** Sentinel opens directly into an in-memory fictional scenario with no passphrase or account prompt. FPAR, MILSANS, and inaccessible-facility CSV controls are available for fictional or approved sanitized testing, but parsed records remain only in the current tab and are cleared by Reset Demo, refresh, or closing the tab. Facility cards and the combined Inspection Schedule can be printed with a plaintext-output warning. Backups and browser persistence remain disabled. It is **not** an approved Army information system and must not receive CUI, PII, classified, or operational data. See [INTERIM_SECURITY.md](INTERIM_SECURITY.md).
+> **No-sign-in session test edition (v0.8.0):** Sentinel opens directly into an in-memory fictional scenario with no passphrase or account prompt. The new Operations Hub adds synthetic deficiency and work-order follow-through, inspector workload folders, facility-extension metadata, an equipment sign-out roster, FPAR alerts, and a local reference helper while preserving the existing FPAR, MILSANS, Grade Board, schedule, import, and print workflows. All records and changes remain only in the current tab and are cleared by Reset Demo, refresh, or closing the tab. Facility cards and the combined Inspection Schedule can be printed with a plaintext-output warning. Backups and browser persistence remain disabled. It is **not** an approved Army information system and must not receive CUI, PII, classified, or operational data. See [INTERIM_SECURITY.md](INTERIM_SECURITY.md).
 
 **Protecting Soldiers Through Smarter Food Protection.**
 
@@ -220,7 +220,19 @@ Sentinel should be measured by its ability to improve outcomes such as:
 
 ## Current Status
 
-Sentinel now includes a dependency-free browser prototype for FPAR and MILSANS inspection planning. The current v0.7.1 hosted build opens without sign-in using fictional, memory-only data; provides bounded session-only CSV imports; adds a combined, filterable, printable Inspection Schedule; and retains the DFAC Grade Board, due-date dashboards, missed-history calculations, inaccessible-facility visualization, and printable facility cards. The no-sign-in edition does not persist records and does not expose encrypted backup or restore controls.
+Sentinel now includes a dependency-free browser prototype for FPAR and MILSANS inspection planning. The current v0.8.0 test build opens without sign-in using fictional, memory-only data; provides bounded session-only CSV imports; includes a combined, filterable, printable Inspection Schedule; and retains the DFAC Grade Board, due-date dashboards, missed-history calculations, inaccessible-facility visualization, and printable facility cards.
+
+The v0.8.0 Operations Hub is a workflow prototype built around synthetic test records:
+
+- **Test personas** switch the fictional inspector workload shown in the Hub. They are not accounts, authentication, authorization, permissions, or an audit trail.
+- **Deficiency and work-order follow-through** keeps unresolved fictional items visible until they are marked resolved and separates pending work orders from completed work.
+- **Inspector folders** group assigned facilities into weekly, monthly, and quarterly workload views.
+- **Facility extension requests** record prototype request details and an entered reference filename as metadata only. Sentinel does not read, retain, or upload attachment contents.
+- **Equipment accountability** provides a fictional sign-out/return roster for cards, equipment, and the duty phone.
+- **FPAR alerts** summarize items that need attention from the in-memory scenario.
+- **Reference assistance** searches a small local index and returns citations to fixed regulation links. It does not call an external AI model, API, search service, or network reference source.
+
+The Operations Hub must be tested with its built-in synthetic records only. Reset Demo, page refresh, and closing the tab discard Hub changes. The no-sign-in edition does not persist records and does not expose encrypted backup or restore controls.
 
 See [TRACKER_README.md](TRACKER_README.md) for feature details and test commands. Public testing must use fictional fixtures. Authorized operational-data evaluation must use a downloaded local copy and follow [LOCAL_REAL_DATA_TESTING.md](LOCAL_REAL_DATA_TESTING.md); real exports must never be uploaded or committed to this public repository.
 

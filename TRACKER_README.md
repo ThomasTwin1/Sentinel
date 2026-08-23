@@ -1,8 +1,8 @@
-# Sentinel Facility Due-Date Tracker v0.7.1 No-Sign-In Session Test Edition
+# Sentinel Facility Due-Date Tracker v0.8.0 No-Sign-In Session Test Edition
 
-A dependency-free browser prototype for validating Sentinel inspection planning. Version 0.7.1 opens directly into a fictional, memory-only scenario with no sign-in prompt, restores bounded CSV imports for current-tab testing, and includes a combined printable schedule for recurring FPAR requirements and next MILSANS actions. Imported and edited records are not persisted. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
+A dependency-free browser prototype for validating Sentinel inspection planning and session-only workflow concepts. Version 0.8.0 opens directly into a fictional, memory-only scenario with no sign-in prompt; provides bounded CSV imports for current-tab testing; includes a combined printable schedule for recurring FPAR requirements and next MILSANS actions; and adds a synthetic Operations Hub. Imported and edited records are not persisted. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
 
-## Working criteria in v0.7.1
+## Working criteria in v0.8.0
 
 - **Last Inspected** uses the latest inspection date listed for each facility.
 - Workflow status does not affect the countdown; Draft, Submitted, and Accepted rows are treated the same for date selection.
@@ -69,7 +69,7 @@ The tests cover monthly month-end behavior, weekly and quarterly calculations, s
 
 ## Architecture
 
-This v0.7.1 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. The hosted test edition loads fictional records into memory and can replace them with a bounded, user-selected CSV for the current tab, but it does not persist records. The encrypted-vault implementation remains in the codebase for future controlled re-enablement, but the no-sign-in experience does not unlock or use a vault. Shared operational access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
+This v0.8.0 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. The hosted test edition loads fictional records into memory and can replace inspection records with a bounded, user-selected CSV for the current tab, but it does not persist records. Operations Hub personas and records are synthetic and session-only. The encrypted-vault implementation remains in the codebase for future controlled re-enablement, but the no-sign-in experience does not unlock or use a vault. Shared operational access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
 
 - v0.2.7 fixes the iPhone **Print Facility Cards** button so it correctly opens Safari's print sheet from the local Sentinel build.
 
@@ -306,3 +306,15 @@ Schedule-only rows are allowed when a facility has a due date but no completed r
 - Keeps imported and edited records in memory only; Reset Demo, refresh, and closing the tab clear them.
 - Keeps encrypted backup/restore and browser persistence disabled.
 - Warns before every facility-card, Grade Board, or schedule print action because print destinations and PDFs are outside Sentinel's protection.
+
+## v0.8.0 Session-Only Operations Hub
+
+- Adds an **Operations Hub** without removing or changing the existing FPAR, MILSANS, Grade Board, Inspection Schedule, Business Calendar, Test Guide, import, or print workflows.
+- Adds fictional **test personas** that switch inspector workload views. They do not create accounts, authenticate a person, enforce permissions, or produce an audit trail.
+- Carries open synthetic deficiencies forward until the tester marks them resolved and tracks pending versus completed fictional work orders.
+- Groups assigned facilities into weekly, monthly, and quarterly inspector folders.
+- Associates a prototype extension request with a fictional facility. Only an entered reference filename is recorded as in-memory display metadata; Sentinel does not read, retain, or upload attachment contents.
+- Adds a fictional sign-out/return roster for equipment, cards, and the duty phone.
+- Derives FPAR attention alerts from the current in-memory scenario.
+- Adds fixed regulation links and a deterministic local keyword reference helper. Results cite those links, and no prompt, record, or query is sent to an external AI model, API, search service, or reference source.
+- Uses synthetic test data only. Reset Demo, refresh, or closing the tab clears all Operations Hub changes and restores the fictional starting scenario on the next load.
