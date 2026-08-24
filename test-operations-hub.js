@@ -34,9 +34,9 @@ function functionBlock(name) {
   return match[0];
 }
 
-assert.match(html, /name="sentinel-release"\s+content="0\.8\.0"/, "the page must expose release 0.8.0");
-assert.match(html, /<title>[^<]*v0\.8\.0[^<]*<\/title>/i, "the document title must identify v0.8.0");
-assert.match(worker, /CACHE_NAME\s*=\s*[^;\n]*v0\.8\.0/i, "the service-worker cache must be advanced for v0.8.0");
+assert.match(html, /name="sentinel-release"\s+content="0\.8\.1"/, "the page must expose release 0.8.1");
+assert.match(html, /<title>[^<]*v0\.8\.1[^<]*<\/title>/i, "the document title must identify v0.8.1");
+assert.match(worker, /CACHE_NAME\s*=\s*[^;\n]*v0\.8\.1/i, "the service-worker cache must be advanced for v0.8.1");
 
 assert.match(html, /<button\b[^>]*class="[^"]*\btab\b[^"]*"[^>]*data-tab="operations"[^>]*>/, "the Operations Hub needs a navigation tab");
 const operations = topLevelSection("operations");
@@ -52,6 +52,8 @@ for (const id of [
   "deficiencyRecurring",
   "deficiencyWorkOrder",
   "deficiencyList",
+  "teamCompletionSummary",
+  "teamCompletionList",
   "operationsCadenceFilter",
   "operationsAssignmentForm",
   "assignmentFacility",
@@ -81,6 +83,7 @@ for (const name of [
   "renderOperationsHub",
   "saveDeficiency",
   "handleDeficiencyAction",
+  "renderTeamCompletionBoard",
   "saveOperationsAssignment",
   "saveExtensionRequest",
   "handleAssetAction",

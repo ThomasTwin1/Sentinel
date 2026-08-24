@@ -1,6 +1,6 @@
-# Sentinel v0.8.0 No-Sign-In Session Test Security Guide
+# Sentinel v0.8.1 No-Sign-In Session Test Security Guide
 
-The v0.8.0 hosted/test edition opens without a passphrase or account prompt. It automatically loads fictional records into memory, adds a session-only Operations Hub, and exposes bounded FPAR, MILSANS, and inaccessible-facility CSV controls for fictional or approved sanitized testing. Parsed records, Operations Hub records, and edits remain only in the current browser tab and are cleared by Reset Demo, refresh, or closing the tab. Encrypted backup/restore remains disabled.
+The v0.8.1 hosted/test edition opens without a passphrase or account prompt. It automatically loads fictional records into memory, adds a session-only Operations Hub and Team Completion Board, and exposes bounded FPAR, MILSANS, and inaccessible-facility CSV controls for fictional or approved sanitized testing. Parsed records, Operations Hub records, and edits remain only in the current browser tab and are cleared by Reset Demo, refresh, or closing the tab. Encrypted backup/restore remains disabled.
 
 ## What this edition improves
 
@@ -10,6 +10,7 @@ The v0.8.0 hosted/test edition opens without a passphrase or account prompt. It 
 - Requires an explicit session-only warning before reading a selected CSV.
 - Adds a bounded, printable inspection schedule using the same fictional FPAR and MILSANS date rules as the dashboards.
 - Adds a session-only Operations Hub for synthetic deficiency follow-through, pending work orders, inspector workload folders, extension-request metadata, equipment sign-out, and FPAR alerts.
+- Adds a fictional Team Completion Board that compares completed-by names only against a built-in synthetic directory. Matching is local, exact after normalization, and never fuzzy; unknown, duplicate, or conflicting attribution requires review.
 - Provides fictional test personas for demonstrating inspector-specific views. Persona switching is not authentication, authorization, identity proofing, access control, or auditing.
 - Records only an entered extension-request reference filename as display metadata. Sentinel does not read, retain, transmit, or upload attachment contents.
 - Provides a deterministic local keyword helper whose results cite a fixed set of regulation links. It does not send prompts or records to an external AI model, API, search service, or reference source.
@@ -45,7 +46,8 @@ This is an interim local protection layer, not an enterprise security boundary.
 - No real user accounts or access control. The Operations Hub's test personas only filter fictional workload views.
 - No uploaded or retained extension-request attachments. A displayed filename does not prove that a document was reviewed, stored, or approved.
 - No external AI reference service. Local helper results are limited to the fixed prototype index and are not authoritative legal, regulatory, medical, or command guidance.
-- No supported operational-data workflow in v0.8.0. The presence of CSV buttons, persona controls, or absence of sign-in are not authorization to enter or import operational information.
+- No supported operational-data workflow in v0.8.1. The presence of CSV buttons, persona controls, team attribution, or absence of sign-in are not authorization to enter or import operational information.
+- No operational roster ingestion, image recognition, personnel-file upload, email transfer, or external roster lookup. The Team Completion Board uses only built-in fictional identities.
 
 Do not use this edition for CUI, PII, classified information, or operational records unless the appropriate information owner and security office provide written approval for the exact device, hosting location, data, and workflow.
 
@@ -54,7 +56,7 @@ Do not use this edition for CUI, PII, classified information, or operational rec
 1. Use a current Microsoft Edge, Chrome, Firefox, or Safari browser.
 2. Run Sentinel from `https://` or `localhost`.
 3. Confirm the header says **No sign-in • fictional data** and the three CSV import controls are available.
-4. Use only the automatically loaded scenario, repository fictional fixtures, or separately approved sanitized test data. Use the Operations Hub only with its built-in synthetic personas, names, facilities, deficiencies, work orders, extension requests, and sign-out records. Do not enter, paste, import, or photograph operational data.
+4. Use only the automatically loaded scenario, repository fictional fixtures, or separately approved sanitized test data. Use the Operations Hub and Team Completion Board only with their built-in synthetic personas, teams, names, facilities, deficiencies, work orders, extension requests, and sign-out records. Do not enter, paste, import, photograph, or email operational data.
 5. Treat the Operations Hub persona control as a demonstration filter only. It does not sign a user in or restrict what another person using the same tab can see or change.
 6. Treat printed schedules and saved print-to-PDF files as unencrypted outputs, even when they contain only test data.
 
@@ -71,6 +73,7 @@ Then open `http://127.0.0.1:8765/` on that same computer. `localhost` is treated
 - Use **Reset Demo** to discard in-memory imports and edits and restore the fictional scenario.
 - Refreshing or closing the tab also discards Operations Hub changes, including resolved deficiencies, work-order status changes, inspector assignments, extension-request filename metadata, and equipment sign-outs.
 - Do not enter real names, work-order identifiers, deficiency details, extension-request filenames, facility assignments, or sign-out information into the Operations Hub.
+- Do not use the Team Completion Board to process an operational alert roster, personnel list, or inspection report. A match in the fictional directory is a user-interface demonstration, not authoritative attribution.
 - Do not treat a test persona as identity verification or rely on it to separate one user's data from another user's data.
 - The extension-request control records entered filename metadata only. Do not enter the name of a real operational document, and do not treat the displayed name as a stored attachment.
 - The reference helper performs local keyword matching and cites fixed links; it is not an external AI service. Verify every reference and decision against the current authoritative source and applicable command guidance.
@@ -81,7 +84,7 @@ Then open `http://127.0.0.1:8765/` on that same computer. `localhost` is treated
 
 ## Encrypted-vault status
 
-The repository still contains the previously tested encrypted-vault implementation and compatibility tests. Version 0.8.0 does not expose or unlock that vault because sign-in is disabled. Re-enabling the vault, real accounts, permissions, attachment storage, an external AI service, or an operational-data path requires a separate security review, updated operating instructions, and explicit release approval.
+The repository still contains the previously tested encrypted-vault implementation and compatibility tests. Version 0.8.1 does not expose or unlock that vault because sign-in is disabled. Re-enabling the vault, real accounts, permissions, attachment storage, an external AI service, or an operational-data path requires a separate security review, updated operating instructions, and explicit release approval.
 
 ## Verification
 
@@ -97,6 +100,7 @@ Important security checks are in:
 - `test-interim-security-policy.js`: CSP, vault integration, output warnings, file limits, and service-worker cache boundaries.
 - `test-no-sign-in-schedule.js`: automatic fictional startup, disabled persistence/backups, enabled bounded session imports, exposed print/demo controls, schedule generation, printing, and mobile layout.
 - `test-public-data-policy.js`: prohibited repository data files and fictional-fixture policy.
+- `test-team-attribution.js`: exact synthetic name matching, no fuzzy guessing, ambiguity handling, output escaping, stale-attribution clearing, and absence of a roster upload control.
 
 ## Moving to the operational version
 

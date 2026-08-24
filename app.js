@@ -23,6 +23,11 @@
     { id: "inspector-charlie", name: "Inspector Charlie", role: "Inspector" },
     { id: "coordinator-delta", name: "Coordinator Delta", role: "Coordinator" }
   ];
+  const OPERATIONS_TEAMS = [
+    { id: "team-1", name: "Team 1", members: ["Inspector Alpha"] },
+    { id: "team-2", name: "Team 2", members: ["Inspector Bravo", "SPC Rivera"] },
+    { id: "team-3", name: "Team 3", members: ["Inspector Charlie", "SGT Morgan"] }
+  ];
   const OPERATIONS_CADENCES = ["WEEKLY", "MONTHLY", "QUARTERLY"];
   const MAX_OPERATIONS_RECORDS = 200;
   const LOCAL_REFERENCES = [
@@ -98,7 +103,7 @@
       "milsansSummaryCards", "milsansRatingKey", "milsansDescription", "milsansRecordCount", "milsansTableBody", "milsansResults",
       "milsansDueSummaryCards", "milsansDueRatingFilter", "milsansDueStatusFilter", "milsansDueMonthFilter", "milsansDueInspectorFilter", "milsansDueSortMode", "milsansDueDescription", "milsansDueRecordCount", "milsansDueTableBody", "milsansDueRequirements",
       "scheduleStartDate", "scheduleEndDate", "scheduleSourceFilter", "scheduleSearch", "schedule30DaysBtn", "schedule90DaysBtn", "printInspectionScheduleBtn", "scheduleSummary", "scheduleDescription", "scheduleRecordCount", "scheduleTableBody",
-      "operationsProfile", "operationsProfileStatus", "operationsSummary", "deficiencyForm", "deficiencyFacility", "deficiencyDescription", "deficiencyRecurring", "deficiencyWorkOrder", "deficiencyList",
+      "operationsProfile", "operationsProfileStatus", "operationsSummary", "deficiencyForm", "deficiencyFacility", "deficiencyDescription", "deficiencyRecurring", "deficiencyWorkOrder", "deficiencyList", "teamCompletionSummary", "teamCompletionList",
       "operationsCadenceFilter", "operationsAssignmentForm", "assignmentFacility", "assignmentProfile", "operationsFolderList", "extensionForm", "extensionFacility", "extensionThroughDate", "extensionReason", "extensionAttachmentName", "extensionList",
       "rosterStatus", "rosterToggleBtn", "assetCheckoutList", "referenceQuery", "referenceSearchBtn", "referenceResult", "operationsAlertList",
       "quickScrollControls", "scrollToTopBtn", "scrollToBottomBtn", "toast"
@@ -331,6 +336,8 @@
       installation: boundedString(facility.installation, `Facility ${index + 1} installation`, 120, true),
       agency: boundedString(facility.agency, `Facility ${index + 1} agency`, 80, true),
       assignedInspector: boundedString(facility.assignedInspector, `Facility ${index + 1} inspector`, 120),
+      lastCompletedBy: boundedString(facility.lastCompletedBy, `Facility ${index + 1} completed-by name`, 120),
+      completedTeam: boundedString(facility.completedTeam, `Facility ${index + 1} completion team`, 80),
       frequency,
       lastConductedDate: optionalIsoDate(facility.lastConductedDate, `Facility ${index + 1} last inspection`),
       active: strictBoolean(facility.active, `Facility ${index + 1} active flag`, true),
@@ -904,6 +911,7 @@
     renderOperationsSelects();
     renderOperationsSummary();
     renderDeficiencies();
+    renderTeamCompletionBoard();
     renderOperationsFolders();
     renderExtensionRequests();
     renderAccountabilityBoard();
@@ -946,10 +954,13 @@
     const pendingWorkOrders = operationsState.deficiencies.filter(record => record.workOrderStatus === "PENDING").length;
     const alertCount = buildOperationsAlerts().length;
     const checkedOut = operationsState.assets.filter(asset => asset.holderProfileId).length;
+    const completionRows = buildTeamCompletionRows();
+    const matchedCompletions = completionRows.filter(row => row.resolution.status === "matched" || row.resolution.status === "reported").length;
     els.operationsSummary.innerHTML = [
       [openDeficiencies, "Open deficiencies", "deficiency"],
       [pendingWorkOrders, "Pending work orders", "work-order"],
       [alertCount, "Local FPAR alerts", "alert"],
+      [`${matchedCompletions}/${completionRows.length}`, "Team-attributed completions", "team"],
       [checkedOut, "Items checked out", "asset"]
     ].map(([value, label, className]) => `
       <div class="operations-stat ${className}">
@@ -957,6 +968,85 @@
         <strong>${value}</strong>
       </div>
     `).join("");
+  }
+
+  function resolveCompletionTeam(completedBy, reportedTeam = "") {
+    if (!window.SentinelTeamAttribution?.resolveTeam) {
+      return { status: "unmatched", team: "", source: "Local matcher unavailable" };
+    }
+    return window.SentinelTeamAttribution.resolveTeam(completedBy, OPERATIONS_TEAMS, reportedTeam);
+  }
+
+  function buildTeamCompletionRows() {
+    const fparRows = state.facilities
+      .filter(facility => facility.active && facility.lastConductedDate)
+      .map(facility => ({
+        program: "FPAR",
+        facility: facility.name,
+        installation: facility.installation,
+        inspectionDate: facility.lastConductedDate,
+        completedBy: facility.lastCompletedBy || "",
+        resolution: resolveCompletionTeam(facility.lastCompletedBy, facility.completedTeam)
+      }));
+    const milsansRows = getLatestCompletedMilsansRecords().map(record => ({
+      program: "MILSANS",
+      facility: record.facilityName,
+      installation: record.installation,
+      inspectionDate: record.inspectionDate,
+      completedBy: record.inspector || "",
+      resolution: resolveCompletionTeam(record.inspector)
+    }));
+
+    return [...fparRows, ...milsansRows].sort((a, b) =>
+      String(b.inspectionDate).localeCompare(String(a.inspectionDate))
+      || a.program.localeCompare(b.program)
+      || a.facility.localeCompare(b.facility)
+    );
+  }
+
+  function renderTeamCompletionBoard() {
+    if (!els.teamCompletionSummary || !els.teamCompletionList) return;
+    const rows = buildTeamCompletionRows();
+    const needsReview = rows.filter(row => !["matched", "reported"].includes(row.resolution.status)).length;
+    els.teamCompletionSummary.innerHTML = [
+      ...OPERATIONS_TEAMS.map(team => ({
+        label: team.name,
+        value: rows.filter(row => row.resolution.team === team.name).length,
+        className: "matched"
+      })),
+      { label: "Needs review", value: needsReview, className: "review" }
+    ].map(item => `
+      <div class="team-completion-stat ${item.className}">
+        <span>${escapeHtml(item.label)}</span>
+        <strong>${item.value}</strong>
+      </div>
+    `).join("");
+
+    if (!rows.length) {
+      els.teamCompletionList.innerHTML = `<div class="operations-empty">No completed fictional inspections are available.</div>`;
+      return;
+    }
+
+    els.teamCompletionList.innerHTML = rows.map(row => {
+      const attributed = row.resolution.status === "matched" || row.resolution.status === "reported";
+      return `
+        <div class="operations-list-item team-completion-item ${attributed ? "team-matched" : "team-review"}">
+          <div class="operations-item-heading">
+            <div>
+              <h4>${escapeHtml(row.facility)}</h4>
+              <p>${escapeHtml(row.installation || "Installation not listed")}</p>
+            </div>
+            <span class="badge ${attributed ? "accessible" : "no-history"}">${escapeHtml(row.resolution.team || "Needs review")}</span>
+          </div>
+          <div class="operations-meta">
+            <span>${escapeHtml(row.program)}</span>
+            <span>Completed ${formatDate(parseISO(row.inspectionDate))}</span>
+            <span>Completed by: ${escapeHtml(row.completedBy || "Not supplied")}</span>
+            <span>${escapeHtml(row.resolution.source)}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
   }
 
   function renderDeficiencies() {
@@ -1737,6 +1827,9 @@
     const now = new Date().toISOString();
     const id = els.facilityId.value || crypto.randomUUID();
     const previous = state.facilities.find(f => f.id === id);
+    const lastConductedDate = els.lastConductedDate.value || null;
+    const keepCompletionAttribution = Boolean(previous)
+      && previous.lastConductedDate === lastConductedDate;
     const facility = {
       id,
       name: els.facilityName.value.trim(),
@@ -1744,8 +1837,10 @@
       installation: els.installation.value.trim(),
       agency: els.agency.value,
       assignedInspector: els.assignedInspector.value.trim(),
+      lastCompletedBy: keepCompletionAttribution ? (previous.lastCompletedBy || "") : "",
+      completedTeam: keepCompletionAttribution ? (previous.completedTeam || "") : "",
       frequency: els.frequency.value,
-      lastConductedDate: els.lastConductedDate.value || null,
+      lastConductedDate,
       active: els.active.checked,
       inaccessible: els.inaccessible.checked,
       inaccessibilityReason: els.inaccessible.checked ? els.inaccessibilityReason.value.trim() : "",
@@ -1867,13 +1962,26 @@
     const facility = state.facilities.find(f => f.id === id);
     if (!facility) return;
     const previousDate = facility.lastConductedDate;
+    const previousAttribution = {
+      lastCompletedBy: facility.lastCompletedBy || "",
+      completedTeam: facility.completedTeam || ""
+    };
     facility.lastConductedDate = els.conductedDate.value;
+    facility.lastCompletedBy = "";
+    facility.completedTeam = "";
     facility.updatedAt = new Date().toISOString();
-    addAudit("INSPECTION_CONDUCTED_DATE_UPDATED", id, { lastConductedDate: previousDate }, { lastConductedDate: facility.lastConductedDate });
+    addAudit("INSPECTION_CONDUCTED_DATE_UPDATED", id, {
+      lastConductedDate: previousDate,
+      ...previousAttribution
+    }, {
+      lastConductedDate: facility.lastConductedDate,
+      lastCompletedBy: "",
+      completedTeam: ""
+    });
     saveState();
     closeInspectionDialog();
     renderAll();
-    showToast("Inspection date recorded and next due date recalculated.");
+    showToast("Inspection date recorded. Completion-team attribution was cleared for review.");
   }
 
   function saveHoliday(event) {
@@ -2115,11 +2223,11 @@
     const demoState = {
       schemaVersion: 1,
       facilities: [
-        demoFacility("Freedom Dining Facility", "100", "Example Installation Korea", "Dining Facility", "Inspector Alpha", "WEEKLY", toISO(addDays(today, -14))),
-        demoFacility("Liberty Exchange Food Court", "220", "Example Installation Korea", "AAFES", "Inspector Bravo", "MONTHLY", toISO(addDays(today, -27))),
-        demoFacility("Patriot Commissary", "310", "Example Installation Korea", "DECA", "Inspector Alpha", "MONTHLY", toISO(addDays(today, -31))),
-        demoFacility("Warrior Snack Bar", "415", "Example Installation Korea", "MWR", "Inspector Charlie", "MONTHLY", toISO(addDays(today, -10))),
-        demoFacility("Mobile BBQ Truck", "MOBILE", "Example Installation Korea", "AAFES", "Inspector Bravo", "QUARTERLY", toISO(addDays(today, -82)))
+        demoFacility("Freedom Dining Facility", "100", "Example Installation Korea", "Dining Facility", "Inspector Alpha", "Inspector Charlie", "WEEKLY", toISO(addDays(today, -14))),
+        demoFacility("Liberty Exchange Food Court", "220", "Example Installation Korea", "AAFES", "Inspector Bravo", "Inspector Alpha", "MONTHLY", toISO(addDays(today, -27))),
+        demoFacility("Patriot Commissary", "310", "Example Installation Korea", "DECA", "Inspector Alpha", "Inspector Bravo", "MONTHLY", toISO(addDays(today, -31))),
+        demoFacility("Warrior Snack Bar", "415", "Example Installation Korea", "MWR", "Inspector Charlie", "Inspector Charlie", "MONTHLY", toISO(addDays(today, -10))),
+        demoFacility("Mobile BBQ Truck", "MOBILE", "Example Installation Korea", "AAFES", "Inspector Bravo", "SPC Rivera", "QUARTERLY", toISO(addDays(today, -82)))
       ],
       customHolidays: [],
       milsansInspections: buildFictionalMilsansRecords(today),
@@ -2131,7 +2239,7 @@
     return demoState;
   }
 
-  function demoFacility(name, buildingNumber, installation, agency, assignedInspector, frequency, lastConductedDate) {
+  function demoFacility(name, buildingNumber, installation, agency, assignedInspector, lastCompletedBy, frequency, lastConductedDate) {
     const now = new Date().toISOString();
     return {
       id: crypto.randomUUID(),
@@ -2140,6 +2248,8 @@
       installation,
       agency,
       assignedInspector,
+      lastCompletedBy,
+      completedTeam: "",
       frequency,
       lastConductedDate,
       active: true,
@@ -3406,6 +3516,7 @@
 
       const headers = rows[headerIndex].map(value => String(value || "").trim());
       const headerMap = Object.fromEntries(headers.map((header, index) => [normalizeHeader(header), index]));
+      const completedByIndex = headerMap.completedby;
       const required = ["installation", "agency", "facility", "date"];
       const missing = required.filter(name => headerMap[name] === undefined);
       if (missing.length) {
@@ -3420,6 +3531,9 @@
         const sourceAgency = String(row[headerMap.agency] || "").trim();
         const installation = String(row[headerMap.installation] || "").trim();
         const inspectedDate = parseFparDate(String(row[headerMap.date] || "").trim());
+        const completedBy = completedByIndex === undefined
+          ? ""
+          : boundedString(row[completedByIndex], "Completed By", 120);
 
         if (!facilityName || !sourceAgency || !installation || !inspectedDate) return;
         datedRowsConsidered += 1;
@@ -3433,7 +3547,8 @@
             facilityName,
             sourceAgency,
             installation,
-            inspectedDate
+            inspectedDate,
+            completedBy
           });
           if (grouped.size > MAX_IMPORTED_RECORDS) {
             throw new Error(`The file contains more than ${MAX_IMPORTED_RECORDS.toLocaleString()} unique facilities.`);
@@ -3466,6 +3581,8 @@
           installation: record.installation,
           agency: normalizeAgency(record.sourceAgency, record.facilityName),
           assignedInspector: previous?.assignedInspector || "",
+          lastCompletedBy: record.completedBy,
+          completedTeam: "",
           frequency: inferImportFrequency(record.sourceAgency, record.facilityName),
           lastConductedDate: toISO(record.inspectedDate),
           active: previous?.active ?? true,

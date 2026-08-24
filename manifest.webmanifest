@@ -1,7 +1,7 @@
 {
-  "name": "Sentinel Secure Conference Prototype",
-  "short_name": "Sentinel Secure",
-  "description": "A secure interim tracker with encrypted local storage and a fictional DFAC Grade Board conference demo.",
+  "name": "Sentinel Fictional Session Demo",
+  "short_name": "Sentinel Demo",
+  "description": "A fictional, session-only food protection planning and team-attribution demonstration.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
