@@ -1,8 +1,8 @@
-# Sentinel Facility Due-Date Tracker v0.8.0 No-Sign-In Session Test Edition
+# Sentinel Facility Due-Date Tracker v0.8.1 No-Sign-In Session Test Edition
 
-A dependency-free browser prototype for validating Sentinel inspection planning and session-only workflow concepts. Version 0.8.0 opens directly into a fictional, memory-only scenario with no sign-in prompt; provides bounded CSV imports for current-tab testing; includes a combined printable schedule for recurring FPAR requirements and next MILSANS actions; and adds a synthetic Operations Hub. Imported and edited records are not persisted. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
+A dependency-free browser prototype for validating Sentinel inspection planning and session-only workflow concepts. Version 0.8.1 opens directly into a fictional, memory-only scenario with no sign-in prompt; provides bounded CSV imports for current-tab testing; includes a combined printable schedule for recurring FPAR requirements and next MILSANS actions; and adds a synthetic Operations Hub with a Team Completion Board. Imported and edited records are not persisted. Review [INTERIM_SECURITY.md](INTERIM_SECURITY.md) before use.
 
-## Working criteria in v0.8.0
+## Working criteria in v0.8.1
 
 - **Last Inspected** uses the latest inspection date listed for each facility.
 - Workflow status does not affect the countdown; Draft, Submitted, and Accepted rows are treated the same for date selection.
@@ -33,8 +33,9 @@ The **Import FPAR CSV** button accepts a VSIMS/FPAR-style CSV export. **Import M
 The importer:
 
 - Locates the header row automatically.
-- Reads Installation, Agency, Facility, and Date.
+- Reads Installation, Agency, Facility, and Date, plus an optional **Completed By** value for synthetic team-attribution testing.
 - Uses the latest dated row for each facility, regardless of workflow status.
+- Carries **Completed By** only from the same row that supplies the latest date; blank, unknown, duplicate, or conflicting identities remain **Needs review**.
 - Does not use workflow status to determine what is coming due.
 - Does not store Prepared By or Reviewed By names.
 - Applies the current working frequency mapping:
@@ -69,7 +70,7 @@ The tests cover monthly month-end behavior, weekly and quarterly calculations, s
 
 ## Architecture
 
-This v0.8.0 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. The hosted test edition loads fictional records into memory and can replace inspection records with a bounded, user-selected CSV for the current tab, but it does not persist records. Operations Hub personas and records are synthetic and session-only. The encrypted-vault implementation remains in the codebase for future controlled re-enablement, but the no-sign-in experience does not unlock or use a vault. Shared operational access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
+This v0.8.1 build intentionally uses plain HTML, CSS, and JavaScript for rapid workflow validation. The hosted test edition loads fictional records into memory and can replace inspection records with a bounded, user-selected CSV for the current tab, but it does not persist records. Operations Hub personas, teams, and records are synthetic and session-only. The encrypted-vault implementation remains in the codebase for future controlled re-enablement, but the no-sign-in experience does not unlock or use a vault. Shared operational access still requires a secure backend, CAC/PIV-backed authentication, server-side permissions, enterprise audit, and an approved hosting environment.
 
 - v0.2.7 fixes the iPhone **Print Facility Cards** button so it correctly opens Safari's print sheet from the local Sentinel build.
 
@@ -318,3 +319,14 @@ Schedule-only rows are allowed when a facility has a due date but no completed r
 - Derives FPAR attention alerts from the current in-memory scenario.
 - Adds fixed regulation links and a deterministic local keyword reference helper. Results cite those links, and no prompt, record, or query is sent to an external AI model, API, search service, or reference source.
 - Uses synthetic test data only. Reset Demo, refresh, or closing the tab clears all Operations Hub changes and restores the fictional starting scenario on the next load.
+
+## v0.8.1 Fictional Team Completion Board
+
+- Adds a phone-friendly **Team Completion Board** to the Operations Hub using built-in fictional inspectors and teams only.
+- Keeps the inspector or team assigned to future work separate from the team attributed to the latest completed inspection.
+- Normalizes case, punctuation, and spacing, then requires an exact synthetic-directory match. Similar names are not fuzzy-matched.
+- Marks missing, unknown, duplicate, or conflicting attribution as **Needs review** instead of guessing.
+- Lets approved synthetic FPAR test files provide an optional **Completed By** column; the value stays tied to the same row selected for the latest inspection date.
+- Clears prior completion attribution when a tester records a newer FPAR date without a completed-by value, preventing stale attribution.
+- Adds no alert-roster, image, personnel-file, or operational-report upload control. Do not use personal email or public GitHub Pages to move operational files.
+- Bumps the offline app-shell cache so iPhone Safari and Android Chrome receive the updated release.

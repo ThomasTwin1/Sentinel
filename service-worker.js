@@ -1,11 +1,12 @@
 const CACHE_PREFIX = "sentinel-tracker-";
-const CACHE_NAME = `${CACHE_PREFIX}v0.8.0-operations-hub`;
+const CACHE_NAME = `${CACHE_PREFIX}v0.8.1-team-completion`;
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./csv-security.js",
   "./secure-vault.js",
+  "./team-attribution.js",
   "./app.js",
   "./manifest.webmanifest"
 ];

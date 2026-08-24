@@ -10,7 +10,7 @@ async function run() {
   const navigated = [];
   let claimed = false;
   const cachePuts = [];
-  const currentCache = "sentinel-tracker-v0.8.0-operations-hub";
+  const currentCache = "sentinel-tracker-v0.8.1-team-completion";
   const caches = {
     async keys() { return ["unrelated-app-cache", "sentinel-tracker-v0.5.1-secure", currentCache]; },
     async delete(key) { deleted.push(key); return true; },

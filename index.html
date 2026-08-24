@@ -7,13 +7,13 @@
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; worker-src 'self'; manifest-src 'self'" />
   <meta name="theme-color" content="#183b2b" />
-  <meta name="sentinel-release" content="0.8.0" />
+  <meta name="sentinel-release" content="0.8.1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Sentinel Tracker" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <title>Sentinel No-Sign-In Session Test Edition v0.8.0</title>
+  <title>Sentinel No-Sign-In Session Test Edition v0.8.1</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -799,6 +799,22 @@
         <article class="operations-card operations-card-wide">
           <div class="operations-card-heading">
             <div>
+              <p class="eyebrow">FICTIONAL COMPLETION ATTRIBUTION</p>
+              <h3>Team Completion Board</h3>
+            </div>
+            <span class="prototype-chip">Exact match only</span>
+          </div>
+          <p class="muted">Shows which fictional team completed each latest inspection by comparing the completed-by name with Sentinel's built-in synthetic team directory. Assignment ownership remains separate from completion attribution. An approved synthetic FPAR CSV may include an optional <strong>Completed By</strong> column.</p>
+          <div class="operations-disclaimer compact" role="note">
+            <strong>Demonstration boundary:</strong> Do not load an operational roster, personnel list, or operational inspection export into this public demo. Unknown, duplicate, or conflicting attribution is marked <strong>Needs review</strong>; Sentinel never guesses with fuzzy matching.
+          </div>
+          <div id="teamCompletionSummary" class="team-completion-summary" aria-label="Team completion summary"></div>
+          <div id="teamCompletionList" class="operations-list" aria-live="polite"></div>
+        </article>
+
+        <article class="operations-card operations-card-wide">
+          <div class="operations-card-heading">
+            <div>
               <p class="eyebrow">INSPECTOR WORKSPACE</p>
               <h3>Weekly / Monthly / Quarterly Folders</h3>
             </div>
@@ -990,6 +1006,7 @@
 
   <script src="csv-security.js"></script>
   <script src="secure-vault.js"></script>
+  <script src="team-attribution.js"></script>
   <script src="app.js"></script>
 
   <nav id="quickScrollControls" class="quick-scroll-controls" aria-label="Quick page navigation">
